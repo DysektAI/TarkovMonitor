@@ -74,5 +74,11 @@
     <Setting Name="questItemsAlert" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
+    <Setting Name="tarkovTrackerDomain" Type="System.String" Scope="User">
+      <Value Profile="(Default)">tarkovtracker.io</Value>
+    </Setting>
+    <Setting Name="scavAvailableTime" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
   </Settings>
 </SettingsFile>

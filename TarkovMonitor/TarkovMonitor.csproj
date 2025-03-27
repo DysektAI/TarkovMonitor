@@ -1,21 +1,52 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+  TarkovMonitor Project File
+  This project is a Windows Forms application that uses Blazor for its UI components
+  and interfaces with various external services and APIs.
+-->
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <!-- 
+    Core project properties that define how the application is built and behaves
+    - WinExe: Creates a Windows executable without a console window
+    - net8.0-windows: Targets .NET 8.0 with Windows-specific features
+    - Nullable: Enables null reference checks for better code safety
+    - UseWindowsForms: Enables Windows Forms functionality
+    - ImplicitUsings: Automatically includes common namespaces
+  -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>11.0</LangVersion>
     <ApplicationIcon>Resources\TarkovDev.ico</ApplicationIcon>
     <AssemblyVersion>1.6.4.0</AssemblyVersion>
+    <!-- 
+      AllowUnsafeBlocks is required and safe here - it enables:
+      - Efficient Windows API calls using LibraryImport attribute
+      - Direct memory access for transparent window effects
+      - Standard practice when using certain Windows desktop features
+      This is commonly used in Windows apps and by Microsoft themselves
+    -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <!-- 
+    Files to exclude from the project
+    These CSS files are handled differently in Blazor
+  -->
   <ItemGroup>
     <None Remove="Blazor\AppLayout.razor.css" />
     <None Remove="Blazor\MainLayout.razor.css" />
     <None Remove="Blazor\Pages\Dashboard\Dashboard.razor.css" />
   </ItemGroup>
 
+  <!-- 
+    Content files that should be copied to the output directory
+    Includes Blazor CSS files and application resources
+  -->
   <ItemGroup>
     <Content Include="Blazor\AppLayout.razor.css" />
     <Content Include="Blazor\MainLayout.razor.css" />
@@ -23,12 +54,22 @@
     <Content Include="Resources\TarkovDev.ico" />
   </ItemGroup>
 
+  <!-- 
+    NuGet package dependencies
+    - GraphQL.Client: For communicating with GraphQL APIs
+    - MaterialSkin & MudBlazor: UI component libraries
+    - NAudio: Audio processing capabilities
+    - Refit: Type-safe REST API client
+    - SQLite: Local database storage
+    - Websocket.Client: Real-time communication
+    - WindowsAPICodePack: Enhanced Windows integration (needed for file dialogs)
+  -->
   <ItemGroup>
     <PackageReference Include="GraphQL.Client" Version="5.0.2" />
     <PackageReference Include="GraphQL.Client.Serializer.SystemTextJson" Version="5.0.2" />
     <PackageReference Include="Humanizer" Version="2.14.1" />
     <PackageReference Include="MaterialSkin.2" Version="2.3.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="6.0.424" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="8.0.3" />
     <PackageReference Include="MudBlazor" Version="6.19.1" />
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="Refit" Version="7.2.22" />
@@ -37,6 +78,11 @@
     <PackageReference Include="WindowsAPICodePack-Shell" Version="1.1.1" />
   </ItemGroup>
 
+  <!-- 
+    Auto-generated code file configurations
+    Resources.Designer.cs: Manages application resources
+    Settings.Designer.cs: Manages application settings
+  -->
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
@@ -50,6 +96,10 @@
     </Compile>
   </ItemGroup>
 
+  <!-- 
+    Resource file configurations
+    Manages embedded resources like images, strings, and other non-code assets
+  -->
   <ItemGroup>
     <EmbeddedResource Update="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -57,6 +107,10 @@
     </EmbeddedResource>
   </ItemGroup>
 
+  <!-- 
+    Settings file configuration
+    Manages application settings that can be changed at runtime
+  -->
   <ItemGroup>
     <None Update="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

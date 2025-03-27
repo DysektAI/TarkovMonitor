@@ -1,9 +1,35 @@
-﻿@inject NavigationManager NavigationManager
-<Router AppAssembly="@typeof(App).Assembly">
+﻿@* App.razor - Root Component
+    This is the main routing component for the Blazor application.
+    It handles all route management and navigation throughout the app.
+*@
+
+@namespace TarkovMonitor.Blazor
+
+@* Inject the NavigationManager service which provides methods for working with URIs and navigation *@
+@inject NavigationManager NavigationManager
+
+@* Router Component
+    The Router component handles the routing logic for the entire application.
+    AppAssembly parameter specifies which assembly to scan for components that can be routed to.
+*@
+<Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="new[] { typeof(MudBlazor.MudAlert).Assembly }">
+	@* Found Component
+		This section defines what happens when a route matches a component.
+		Context="routeData" creates a variable to hold the route information.
+	*@
 	<Found Context="routeData">
-		<RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
-		<FocusOnNavigate RouteData="@routeData" Selector="h1"/>
+		@* RouteView renders the component matching the route using the specified layout
+			DefaultLayout specifies MainLayout as the default layout for all pages *@
+		<RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+		@* FocusOnNavigate sets focus to the h1 element when navigation occurs
+			This helps with accessibility by moving focus to the main content *@
+		<FocusOnNavigate RouteData="@routeData" Selector="h1" />
 	</Found>
+
+	@* NotFound Component
+		This section defines what happens when no route matches the current URL.
+		It shows a "Not found" error page using the MainLayout.
+	*@
 	<NotFound>
 		<PageTitle>Not found</PageTitle>
 		<LayoutView Layout="@typeof(MainLayout)">
@@ -13,5 +39,6 @@
 </Router>
 
 @code {
-
+	@* This code block can contain any C# code needed for the component.
+		Currently empty as the routing logic is handled declaratively above. *@
 }

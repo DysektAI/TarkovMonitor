@@ -1,33 +1,97 @@
-﻿@using System.Diagnostics
+﻿@* 
+    AppLayout.razor
+    This is the main layout component for the Tarkov Monitor application.
+    It provides the core UI structure including a top app bar, navigation drawer,
+    and main content area using MudBlazor components.
+*@
+
+@using System.Diagnostics
+@using System.Timers
+@* Inherits from Blazor's base layout component *@
 @inherits LayoutComponentBase
+@* Specifies that this component uses MainLayout as its parent layout *@
 @layout MainLayout
 
-@inject IJSRuntime JSRuntime;
+@* Injects JavaScript runtime for potential JS interop *@
+@inject IJSRuntime JSRuntime
+@implements IDisposable
 
+@* Main container with full width/height and custom background *@
 <div style="width: 100%; height: 100%" class="tarkov-dev-bg">
 	<MudLayout>
+		@* Top Application Bar *@
 		<MudAppBar Elevation="1" Bottom="false" Dense="true">
-			<MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer"/>
+			@* Menu toggle button for the navigation drawer *@
+			<MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+				OnClick="@ToggleDrawer" />
+			@* Displays the current page title *@
 			@CurrentPageTitle
-			<MudSpacer/>
+
+			@* Display app version in center of app bar *@
+			<MudSpacer />
+			<MudText Typo="Typo.body2" Class="mx-2 text-center">
+				v@(System.Reflection.Assembly.GetExecutingAssembly().GetName().Version)
+			</MudText>
+			<MudSpacer />
+
+			@* API Status Indicator *@
+			<MudTooltip
+				Text="@(apiDataLoaded ? $"API data successfully loaded with {TarkovMonitor.TarkovDev.Items.Count} items, {TarkovMonitor.TarkovDev.Maps.Count} maps, and {TarkovMonitor.TarkovDev.Traders.Count} traders" : "API data failed to load. Restart the application to try again.")">
+				<MudText Typo="Typo.body2">
+					Tarkov.dev API:
+					@if (apiDataLoaded)
+					{
+						<MudChip Color="Color.Success" Size="Size.Small">Loaded</MudChip>
+					}
+					else
+					{
+						<MudChip Color="Color.Error" Size="Size.Small">Failed</MudChip>
+					}
+				</MudText>
+			</MudTooltip>
 		</MudAppBar>
+
+		@* 
+			Navigation Drawer
+			- Responsive variant adjusts based on screen size
+			- Left-anchored with elevation effect
+			- State controlled by drawerOpen variable
+		*@
 		<MudDrawer @bind-Open="@drawerOpen" Elevation="1" Anchor="Anchor.Left" Variant="@DrawerVariant.Responsive">
+			@* Drawer Header with Logo and App Title *@
 			<MudDrawerHeader LinkToIndex="true">
 				<div>
-					<img src="tarkov-dev-logo.svg" width="100%" style="vertical-align: middle;"/>
+					<img src="tarkov-dev-logo.svg" width="100%" style="vertical-align: middle;" />
 					<MudText Align="Align.Center" Typo="Typo.h6">Tarkov Monitor</MudText>
 				</div>
 			</MudDrawerHeader>
+
+			@* 
+				Navigation Menu
+				Contains links to different sections of the application
+				Each link includes an icon and text
+			*@
 			<MudNavMenu Color="Color.Secondary" Bordered="true">
-				<MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Message">Messages</MudNavLink>
-				<MudNavLink Href="/group" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Group">Group</MudNavLink>
-				<MudNavLink Href="/settings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
-				<MudNavLink Href="/sounds" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Speaker">Sounds</MudNavLink>
-				<MudNavLink Href="/stats" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.BarChart">Stats</MudNavLink>
-				<MudNavLink Href="/raw" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.RawOn">Raw Logs</MudNavLink>
-				<MudNavLink Href="/timers" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Timer">Timers</MudNavLink>
+				<MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard
+				</MudNavLink>
+				<MudNavLink Href="/group" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Group">Group
+				</MudNavLink>
+				<MudNavLink Href="/settings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Settings">Settings
+				</MudNavLink>
+				<MudNavLink Href="/sounds" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Speaker">Sounds
+				</MudNavLink>
+				<MudNavLink Href="/stats" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.BarChart">Stats
+				</MudNavLink>
+				<MudNavLink Href="/raw" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.RawOn">Raw Logs
+				</MudNavLink>
 			</MudNavMenu>
 		</MudDrawer>
+
+		@* 
+			Main Content Area
+			Wraps the @Body content in a cascading value to provide
+			access to this AppLayout instance to child components
+		*@
 		<MudMainContent Class="mt-2">
 			<CascadingValue Name="AppLayout" Value="this">
 				@Body
@@ -37,18 +101,77 @@
 </div>
 
 @code {
-
+	// Controls the state of the navigation drawer (open/closed)
 	bool drawerOpen = true;
 
+	// Stores the current page title displayed in the app bar
 	public string CurrentPageTitle = "TarkovMonitor";
 
-	public void SetTitle(string value) {
+	// Store API data loading status
+	private bool apiDataLoaded = false;
+
+	// Timer to check API status
+	private Timer? statusCheckTimer;
+
+	// Lifecycle method - called when component is initialized
+	protected override void OnInitialized()
+	{
+		base.OnInitialized();
+
+		// Check API status immediately
+		CheckApiStatus();
+
+		// Set up timer to check API status periodically (every 2 seconds)
+		statusCheckTimer = new Timer(2000);
+		statusCheckTimer.Elapsed += (sender, e) => CheckApiStatus();
+		statusCheckTimer.AutoReset = true;
+		statusCheckTimer.Start();
+	}
+
+	// Method to check API status and update UI if needed
+	private void CheckApiStatus()
+	{
+		bool isCurrentlyLoaded = IsDataLoaded();
+
+		// Only update UI if status has changed
+		if (isCurrentlyLoaded != apiDataLoaded)
+		{
+			apiDataLoaded = isCurrentlyLoaded;
+			// Ensure UI gets updated
+			InvokeAsync(StateHasChanged);
+		}
+	}
+
+	// Method to update the page title from child components
+	// Triggers a UI refresh when the title changes
+	public void SetTitle(string value)
+	{
 		CurrentPageTitle = value;
 		StateHasChanged();
 	}
 
+	// Toggles the navigation drawer open/closed state
 	void ToggleDrawer()
 	{
 		drawerOpen = !drawerOpen;
+	}
+
+	// Check if the API data is loaded
+	private bool IsDataLoaded()
+	{
+		return TarkovMonitor.TarkovDev.Traders.Count > 0 &&
+		TarkovMonitor.TarkovDev.Maps.Count > 0 &&
+		TarkovMonitor.TarkovDev.Items.Count > 0;
+	}
+
+	// Cleanup resources when component is disposed
+	public void Dispose()
+	{
+		// Dispose of timer
+		if (statusCheckTimer != null)
+		{
+			statusCheckTimer.Stop();
+			statusCheckTimer.Dispose();
+		}
 	}
 }

@@ -1,19 +1,44 @@
-﻿@inject GameWatcher eft
+﻿@* 
+    ConfirmClearDataDialog.razor
+    Purpose: This component creates a confirmation dialog for clearing all stats data in the application.
+    It uses MudBlazor's dialog system for the UI components and interaction handling.
+*@
+
+@* Injects the GameWatcher service for EFT (Escape From Tarkov) functionality *@
+@inject GameWatcher eft
 
 <MudDialog>
+    @* Main dialog container from MudBlazor UI framework *@
     <DialogContent>
+        @* Dialog body content containing the warning message *@
         <MudText>Are you sure you want to clear all data? This cannot be undone.</MudText>
     </DialogContent>
     <DialogActions>
+        @* Dialog action buttons container *@
         <MudButton OnClick="Cancel">Cancel</MudButton>
         <MudButton Color="Color.Primary" OnClick="Submit">Clear Data</MudButton>
     </DialogActions>
 </MudDialog>
-@code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
 
+@code {
+    @* 
+        CascadingParameter receives the MudDialog instance from the parent component.
+        This is required for controlling the dialog's behavior (closing, canceling, etc.)
+    *@
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+
+    @* 
+        Handles the Cancel button click
+        Closes the dialog without performing any action
+    *@
     void Cancel() => MudDialog.Cancel();
 
+    @* 
+        Handles the Clear Data confirmation
+        1. Calls the static ClearData method to remove all stats
+        2. Closes the dialog with a successful result
+        Returns: DialogResult with true value indicating successful confirmation
+    *@
     public void Submit()
     {
         TarkovMonitor.Stats.ClearData();

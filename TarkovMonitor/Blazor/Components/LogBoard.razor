@@ -1,20 +1,39 @@
-﻿@using Humanizer
+﻿@* 
+    LogBoard.razor
+    This component displays a log board that shows log messages in reverse chronological order.
+    It uses MudBlazor components for UI elements and updates in real-time when new logs are added.
+*@
+
+@* Humanizer library is used for human-friendly timestamp formatting *@
+@using Humanizer
+
+@* Inject the LogRepository service to access log data *@
 @inject LogRepository logRepository
+
+@* Main container stack with reverse ordering (newest logs on top) and centered alignment *@
 <MudStack Reverse="true" Justify="Justify.FlexStart" AlignItems="AlignItems.Center" Class="ma-3">
+    @* Display a message when no logs are available *@
     @if (logRepository.Logs.Count == 0)
     {
         <MudAlert Severity="Severity.Info">No new logs have been seen since launching the monitor.</MudAlert>
-    }else{
+    }
+    else
+    {
+        @* Iterate through each log entry and display it *@
         @foreach (LogLine line in logRepository.Logs)
         {
             <div class="">
+                @* Log message container *@
                 <div class="d-block">
+                    @* Paper component for the log message with secondary theme styling *@
                     <MudPaper Class="d-flex align-enter py-1 px-3 mud-theme-secondary" Elevation="0" Square>
+                        @* Log message content with preserved whitespace *@
                         <span class="my-auto" style="white-space: pre-wrap">
                             @line.Message
                         </span>
                     </MudPaper>
                 </div>
+                @* Timestamp display in a smaller font, right-aligned *@
                 <div class="d-flex justify-end mt-1">
                     <MudText Style="font-size: .8em">@line.Time.ToUniversalTime().Humanize()</MudText>
                 </div>
@@ -24,15 +43,26 @@
 </MudStack>
 
 @code {
+    /// <summary>
+    /// Component initialization logic
+    /// </summary>
     protected override void OnInitialized()
     {
         base.OnInitialized();
 
-        logRepository.newLog += LogAdded;
+        // Subscribe to the NewLog event to update the UI when new logs are added
+        logRepository.NewLog += LogAdded;
     }
 
+    /// <summary>
+    /// Event handler for when a new log is added
+    /// Triggers a UI refresh to display the new log entry
+    /// </summary>
+    /// <param name="sender">The event sender</param>
+    /// <param name="e">Event arguments containing the new log information</param>
     private void LogAdded(object? sender, NewLogLineArgs e)
     {
+        // Invoke StateHasChanged asynchronously to update the UI
         InvokeAsync(() => StateHasChanged());
     }
 }

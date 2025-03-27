@@ -1,13 +1,26 @@
-﻿
+﻿@* 
+    LoadoutRecursor.razor
+    This component recursively displays items from a Tarkov loadout, showing their images and allowing
+    for expandable/collapsible sub-items. It's designed to work with the Tarkov.dev API data structure
+    and MudBlazor UI components.
+*@
+
 <MudItem Class="d-flex align-center flex-grow-1 gap-4" Elevation="0">
-    <MudLink Href="@itemLink"><MudImage Src="@itemImageURL" Width="@imgWidth" Height="@imgHeight" Class="ma-2" title="@itemName" /></MudLink>
+    @* Display the item image as a clickable link *@
+    <MudLink Href="@itemLink">
+        <MudImage Src="@itemImageURL" Width="@imgWidth" Height="@imgHeight" Class="ma-2" title="@itemName" />
+    </MudLink>
+    @* If the item has sub-items, show expand/collapse controls and nested items *@
     @if (subItems.Length > 0)
     {
-        <MudButton OnClick="OnExpandCollapseClick"><MudIcon Icon="@(_expanded ? Icons.Material.Filled.IndeterminateCheckBox : Icons.Material.Filled.AddBox)" Title="Tarkov.dev" Color="Color.Info" /></MudButton>
+        <MudButton OnClick="OnExpandCollapseClick">
+            <MudIcon Icon="@(_expanded? Icons.Material.Filled.IndeterminateCheckBox : Icons.Material.Filled.AddBox)"
+                Title="Tarkov.dev" Color="Color.Info" />
+        </MudButton>
         <MudCollapse Expanded="_expanded">
+            @* Recursively render child items *@
             @foreach (LoadoutItem item in subItems)
             {
-
                 <LoadoutRecursor Loadout="@Loadout" Item="item" />
             }
         </MudCollapse>
@@ -15,30 +28,79 @@
 </MudItem>
 
 @code {
+    /// <summary>
+    /// The complete array of loadout items. This is used to find child items
+    /// for the current item being displayed.
+    /// </summary>
     [Parameter]
     public LoadoutItem[] Loadout { get; set; } = { };
 
+    /// <summary>
+    /// The current item being displayed in this instance of the component.
+    /// Can be null for the root level.
+    /// </summary>
     [Parameter]
-    public LoadoutItem Item { get; set; }
+    public LoadoutItem? Item { get; set; }
 
+    /// <summary>
+    /// Cached array of child items that belong to the current Item.
+    /// Calculated during initialization.
+    /// </summary>
     private LoadoutItem[] subItems { get; set; } = { };
 
+    /// <summary>
+    /// Tracks whether the sub-items are currently expanded or collapsed
+    /// </summary>
     bool _expanded = false;
 
-    private TarkovDev.Item? devItem => TarkovDev.Items.Where(i => i.id == Item._tpl).FirstOrDefault();
+    /// <summary>
+    /// Retrieves the detailed item information from TarkovDev.Items collection
+    /// by matching the item template ID (_tpl)
+    /// </summary>
+    private TarkovDev.Item? devItem => TarkovDev.Items.Where(i => i.Id == Item?._tpl).FirstOrDefault();
 
-    private int imgWidth => devItem != null ? (devItem.width * 31) + 1 : 96;
-    private int imgHeight => devItem != null ? (devItem.height * 31) + 1 : 96;
-    private string itemImageURL => devItem?.gridImageLink ?? "";
-    private string itemLink => devItem?.link ?? "";
-    private string itemName => devItem?.name ?? "";
+    /// <summary>
+    /// Calculates the display width of the item image based on the item's grid width.
+    /// Falls back to 96 pixels if item information is not available.
+    /// </summary>
+    private int imgWidth => devItem != null ? (devItem.Width * 31) + 1 : 96;
 
+    /// <summary>
+    /// Calculates the display height of the item image based on the item's grid height.
+    /// Falls back to 96 pixels if item information is not available.
+    /// </summary>
+    private int imgHeight => devItem != null ? (devItem.Height * 31) + 1 : 96;
+
+    /// <summary>
+    /// Gets the URL for the item's grid image from the Tarkov.dev data
+    /// </summary>
+    private string itemImageURL => devItem?.GridImageLink ?? "";
+
+    /// <summary>
+    /// Gets the URL for the item's details page on Tarkov.dev
+    /// </summary>
+    private string itemLink => devItem?.Link ?? "";
+
+    /// <summary>
+    /// Gets the display name of the item
+    /// </summary>
+    private string itemName => devItem?.Name ?? "";
+
+    /// <summary>
+    /// Initializes the component by finding all child items that belong to the current Item.
+    /// Filters out items that don't have corresponding entries in the TarkovDev.Items collection.
+    /// </summary>
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        subItems = Loadout.Where(i => i.parentId == Item._id && TarkovDev.Items.Where(it => it.id == i._tpl).FirstOrDefault() != null).ToArray();
+        subItems = Item == null ? Array.Empty<LoadoutItem>() :
+        Loadout.Where(i => i.ParentId == Item._id && TarkovDev.Items.Where(it => it.Id == i._tpl).FirstOrDefault() !=
+        null).ToArray();
     }
 
+    /// <summary>
+    /// Toggles the expanded/collapsed state of the sub-items when the expand/collapse button is clicked
+    /// </summary>
     private void OnExpandCollapseClick()
     {
         _expanded = !_expanded;

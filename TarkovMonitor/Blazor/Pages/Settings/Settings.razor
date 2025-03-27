@@ -50,7 +50,7 @@
                 <MudSelect @bind-Value="@ScavKarmaSelect" T="int" Label="Scav Karma" AnchorOrigin="Origin.BottomCenter" Class="d-inline-flex" xs="3">
                     @if (TraderFence != null)
                     {
-                        @foreach (TarkovDev.TraderReputationLevel lvl in TraderFence.reputationLevels)
+                        @foreach (TarkovDev.TraderReputationLevel lvl in TraderFence.ReputationLevels)
                         {
                             <MudSelectItem Value="@lvl.minimumReputation" />
                         }
@@ -113,7 +113,7 @@
                 <MudSelectItem T="string" Value="@string.Empty">None</MudSelectItem>
                 @foreach (var map in TarkovDev.Maps)
                 {
-                    <MudSelectItem T="string" Value="@map.nameId">@map.name</MudSelectItem>
+                    <MudSelectItem T="string" Value="@map.NameId">@map.Name</MudSelectItem>
                 }
             </MudSelect>
         </MudPaper>
@@ -145,14 +145,14 @@
 @code {
 
     [CascadingParameter(Name="AppLayout")]
-    public AppLayout AppLayout { get; set; }
+    public AppLayout AppLayout { get; set; } = default!;
 
-    private Dictionary<int, string> PlaybackDevices;
+    private Dictionary<int, string> PlaybackDevices = new();
     private TarkovDev.Trader? TraderFence
     {
         get
         {
-            return TarkovDev.Traders.Find(t => t.normalizedName == "fence");
+            return TarkovDev.Traders.Find(t => t.NormalizedName == "fence");
         }
     }
 
@@ -180,40 +180,40 @@
     {
     }
 
-    public void PlayRaidStart()
+    public async Task PlayRaidStart()
     {
-        Sound.Play("raid_starting");
+        await Sound.Play("raid_starting");
     }
 
-    public void PlayMatchFound()
+    public async Task PlayMatchFound()
     {
-        Sound.Play("match_found");
+        await Sound.Play("match_found");
     }
 
-    public void PlayRestartTask()
+    public async Task PlayRestartTask()
     {
-        Sound.Play("restart_failed_tasks");
+        await Sound.Play("restart_failed_tasks");
     }
 
-    public void PlayRunthrough()
+    public async Task PlayRunthrough()
     {
-        Sound.Play("runthrough_over");
+        await Sound.Play("runthrough_over");
     }
 
-    public async void PlayAirFilters()
+    public async Task PlayAirFilters()
     {
         await Sound.Play("air_filter_on");
-        Sound.Play("air_filter_off");
+        await Sound.Play("air_filter_off");
     }
 
-    public void PlayScavAvailable()
+    public async Task PlayScavAvailable()
     {
-        Sound.Play("scav_available");
+        await Sound.Play("scav_available");
     }
 
-    public void PlayQuestItems()
+    public async Task PlayQuestItems()
     {
-        Sound.Play("quest_items");
+        await Sound.Play("quest_items");
     }
 
     public DialogOptions diagOptions = new DialogOptions { CloseOnEscapeKey = true };
@@ -397,17 +397,10 @@
         }
     }
 
-    //public bool TestTokenButtonDisabled { get; set; }
-    public bool TestTokenButtonDisabled
+    private bool TestTokenButtonDisabled
     {
-        get
-        {
-            return TarkovTracker.GetToken(eft.CurrentProfile.Id).Length != 22;
-        }
-        set
-        {
-
-        }
+        get => TarkovTrackerToken?.Length != 22;
+        set { } // Empty setter since the value is computed
     }
 
     public TimeSpan RunthroughTime
@@ -446,16 +439,10 @@
     bool tokenShow;
     InputType PasswordInput = InputType.Password;
     string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
-    public string TarkovTrackerToken
+    private string TarkovTrackerToken
     {
-        get
-        {
-            return TarkovTracker.GetToken(eft.CurrentProfile.Id);
-        }
-        set
-        {
-            TarkovTracker.SetToken(eft.CurrentProfile.Id, value);
-        }
+        get => TarkovTracker.GetToken(eft.CurrentProfile.Id);
+        set => TarkovTracker.SetToken(eft.CurrentProfile.Id, value);
     }
 
     void TokenShowClick()
@@ -484,11 +471,12 @@
             try
             {
                 var tokenResponse = await TarkovTracker.TestToken(TarkovTrackerToken);
-                if (!tokenResponse.permissions.Contains("WP"))
+                if (!tokenResponse.Permissions.Contains("WP"))
                 {
                     messageLog.AddMessage("You do not have write permissions with this token.", "warning");
                     return;
                 }
+                messageLog.AddMessage("Token validated successfully!", "success");
             }
             catch (Exception ex)
             {

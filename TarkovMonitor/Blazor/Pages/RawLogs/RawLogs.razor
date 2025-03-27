@@ -1,30 +1,40 @@
 ﻿@page "/raw"
 @using System.Diagnostics
+@* Inject the GameWatcher service to monitor EFT logs *@
 @inject GameWatcher eft
+@* Inject dialog service for showing modal dialogs *@
 @inject IDialogService DialogService
+@* Use the AppLayout as the layout for this page *@
 @layout AppLayout
+@* Implement IDisposable for cleanup *@
 @implements IDisposable
 
-
+@* Main grid container for the logs display *@
 <MudGrid Class="pa-0" Spacing="0" Style="position:relative;">
-	<MudItem xs="12">
+    @* Container for the main log display board *@
+    <MudItem xs="12">
         <LogBoard>
         </LogBoard>
     </MudItem>
+
+    @* Floating action button menu - Only visible in debug mode or when logs folder is set *@
     @if (DebugMode() || LogsFolderSet())
     {
         <div class="ma-2" style="position:fixed; bottom: 0px; right: 0px;">
             <MudMenu AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomRight">
                 <ActivatorContent>
+                    @* Floating action button with plus icon *@
                     <MudFab Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" />
                 </ActivatorContent>
                 <ChildContent>
-                    @if(DebugMode())
+                    @* Debug mode menu items *@
+                    @if (DebugMode())
                     {
                         <MudMenuItem @onclick="OpenCustomDialog">Custom Log Data</MudMenuItem>
                         <MudMenuItem @onclick="OpenForceReadDialog">Read Previous Logs</MudMenuItem>
                     }
-                    @if(LogsFolderSet())
+                    @* Logs folder related menu items *@
+                    @if (LogsFolderSet())
                     {
                         <MudMenuItem @onclick="OpenLogsFolder">Open Logs Folder</MudMenuItem>
                     }
@@ -35,58 +45,97 @@
 </MudGrid>
 
 @code {
-    [CascadingParameter(Name="AppLayout")]
-    public AppLayout AppLayout { get; set; }
+    /// <summary>
+    /// Cascading parameter for the AppLayout component.
+    /// Used to set the page title and interact with the layout.
+    /// </summary>
+    [CascadingParameter(Name = "AppLayout")]
+    public AppLayout? AppLayout { get; set; }
 
-    //private int messageCount = 0;
-
+    /// <summary>
+    /// Opens a dialog for processing custom log data.
+    /// Only available in debug mode.
+    /// </summary>
     private void OpenCustomDialog()
     {
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.ExtraLarge, FullWidth = true };
-        DialogService.Show<CustomLogDialog>("Process Custom Log Data", options);
+        DialogService?.Show<CustomLogDialog>("Process Custom Log Data", options);
     }
 
+    /// <summary>
+    /// Opens a dialog for reading past log files.
+    /// Only available in debug mode.
+    /// </summary>
     private void OpenForceReadDialog()
     {
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.ExtraLarge, FullWidth = true };
-        DialogService.Show<ForceReadDialog>("Read Past Log Files", options);
+        DialogService?.Show<ForceReadDialog>("Read Past Log Files", options);
     }
 
+    /// <summary>
+    /// Opens the Windows Explorer to the current logs folder location.
+    /// Only available when a logs folder is set.
+    /// </summary>
     private void OpenLogsFolder()
     {
-        Process.Start("explorer.exe", eft.CurrentLogsFolder);
+        if (eft?.CurrentLogsFolder != null)
+        {
+            Process.Start("explorer.exe", eft.CurrentLogsFolder);
+        }
     }
 
+    /// <summary>
+    /// Component initialization logic
+    /// </summary>
     protected override void OnInitialized()
     {
         base.OnInitialized();
     }
 
+    /// <summary>
+    /// Called when component parameters are set
+    /// </summary>
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
     }
 
+    /// <summary>
+    /// Called after the component has been rendered.
+    /// Sets the page title on first render.
+    /// </summary>
+    /// <param name="firstRender">True if this is the first time the component has been rendered</param>
     protected override void OnAfterRender(bool firstRender)
     {
         base.OnAfterRender(firstRender);
         if (firstRender)
         {
-            AppLayout.SetTitle("Raw Logs");
+            AppLayout?.SetTitle("Raw Logs");
         }
     }
 
+    /// <summary>
+    /// Cleanup method required by IDisposable interface
+    /// </summary>
     public void Dispose()
     {
     }
 
+    /// <summary>
+    /// Checks if the application is running in debug mode
+    /// </summary>
+    /// <returns>True if debugger is attached, false otherwise</returns>
     private bool DebugMode()
     {
         return Debugger.IsAttached;
     }
 
+    /// <summary>
+    /// Checks if a logs folder path has been set
+    /// </summary>
+    /// <returns>True if the current logs folder is not empty, false otherwise</returns>
     private bool LogsFolderSet()
     {
-        return eft.CurrentLogsFolder != "";
+        return !string.IsNullOrEmpty(eft?.CurrentLogsFolder);
     }
 }

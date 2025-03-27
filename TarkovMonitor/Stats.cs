@@ -8,10 +8,16 @@ namespace TarkovMonitor
     {
         public static string DatabasePath => Path.Join(Application.UserAppDataPath, "TarkovMonitor.db");
         public static string ConnectionString => $"Data Source={DatabasePath};Version=3;";
-        private static SQLiteConnection Connection;
+        private static readonly SQLiteConnection Connection;
+        /// <summary>
+        /// Initializes the <see cref="Stats"/> class.
+        /// </summary>
+        /// <remarks>
+        /// Creates the database tables if they do not exist, and updates the database if necessary
+        /// </remarks>
         static Stats()
         {
-			Connection = new SQLiteConnection(ConnectionString);
+            Connection = new SQLiteConnection(ConnectionString);
             Connection.Open();
 
             List<string> createTableCommands = new()
@@ -29,6 +35,13 @@ namespace TarkovMonitor
             UpdateDatabase();
         }
 
+        /// <summary>
+        /// Deletes all data from all tables in the database.
+        /// <para>
+        /// This method disables foreign key constraints, deletes all data from all tables,
+        /// and then re-enables foreign key constraints.
+        /// </para>
+        /// </summary>
         public static void ClearData()
         {
             Query("PRAGMA foreign_keys=off;");
@@ -41,7 +54,13 @@ namespace TarkovMonitor
             Query("PRAGMA foreign_keys=on;");
         }
 
-        private static SQLiteDataReader Query(string query, Dictionary<string,object> parameters)
+        /// <summary>
+        /// Executes a query on the database and returns the result.
+        /// </summary>
+        /// <param name="query">The SQL query to execute.</param>
+        /// <param name="parameters">Parameters to replace in the query.</param>
+        /// <returns>A <see cref="SQLiteDataReader"/> containing the result of the query.</returns>
+        private static SQLiteDataReader Query(string query, Dictionary<string, object> parameters)
         {
             using var command = new SQLiteCommand(Connection);
             command.CommandText = query;
@@ -51,11 +70,21 @@ namespace TarkovMonitor
             }
             return command.ExecuteReader();
         }
-        private static SQLiteDataReader Query (string query)
+        /// <summary>
+        /// Executes a query on the database and returns the result.
+        /// </summary>
+        /// <param name="query">The SQL query to execute.</param>
+        /// <returns>A <see cref="SQLiteDataReader"/> containing the result of the query.</returns>
+        private static SQLiteDataReader Query(string query)
         {
             return Query(query, new());
         }
 
+        /// <summary>
+        /// Adds a flea market sale to the database.
+        /// </summary>
+        /// <param name="e">The message log content of the sale.</param>
+        /// <param name="profile">The profile of the sale.</param>
         public static void AddFleaSale(FleaSoldMessageLogContent e, Profile profile)
         {
             var sql = "INSERT INTO flea_sales(profile_id, item_id, buyer, count, currency, price) VALUES(@profile_id, @item_id, @buyer, @count, @currency, @price);";
@@ -82,6 +111,11 @@ namespace TarkovMonitor
             };
             Query(sql, parameters);
         }
+        /// <summary>
+        /// Returns the total amount of money (in the specified currency) that has been earned through flea market sales.
+        /// </summary>
+        /// <param name="currency">The currency to get the total for.</param>
+        /// <returns>The total amount of money earned through flea market sales in the specified currency.</returns>
         public static int GetTotalSales(string currency)
         {
             var reader = Query("SELECT SUM(price) as total FROM flea_sales WHERE currency = @currency", new() { { "currency", currency } });
@@ -94,7 +128,11 @@ namespace TarkovMonitor
                 return reader.GetInt32(0);
             }
             return 0;
-		}
+        }
+        /// <summary>
+        /// Adds a new raid to the database.
+        /// </summary>
+        /// <param name="e">The raid event to add.</param>
         public static void AddRaid(RaidInfoEventArgs e)
         {
             var sql = "INSERT INTO raids(profile_id, map, raid_type, queue_time, raid_id) VALUES (@profile_id, @map, @raid_type, @queue_time, @raid_id);";
@@ -103,7 +141,7 @@ namespace TarkovMonitor
                     "profile_id", e.Profile.Id
                 },
                 {
-                    "map", e.RaidInfo.Map
+                    "map", e.RaidInfo.Map ?? string.Empty
                 },
                 {
                     "raid_type", e.RaidInfo.RaidType
@@ -117,6 +155,11 @@ namespace TarkovMonitor
             };
             Query(sql, parameters);
         }
+        /// <summary>
+        /// Returns the total number of raids that have been done on the given map.
+        /// </summary>
+        /// <param name="mapNameId">The nameId of the map to get the total for.</param>
+        /// <returns>The total number of raids done on the given map.</returns>
         public static int GetTotalRaids(string mapNameId)
         {
             var reader = Query("SELECT COUNT(id) as total FROM raids WHERE map = @map", new() { { "map", mapNameId } });
@@ -130,6 +173,11 @@ namespace TarkovMonitor
             }
             return 0;
         }
+        /// <summary>
+        /// Returns a dictionary where the keys are the names of the maps, and the values are the total number of raids of the given type that have been done on that map.
+        /// </summary>
+        /// <param name="raidType">The type of raid to get the totals for.</param>
+        /// <returns>A dictionary of map names and totals.</returns>
         public static Dictionary<string, int> GetTotalRaidsPerMap(RaidType raidType)
         {
             Dictionary<string, int> mapTotals = new();
@@ -146,15 +194,22 @@ namespace TarkovMonitor
             Dictionary<string, int> raidsPerMap = new();
             foreach (var map in TarkovDev.Maps)
             {
-                raidsPerMap[map.name] = 0;
-                if (mapTotals.ContainsKey(map.nameId))
+                raidsPerMap[map.Name] = 0;
+                if (mapTotals.ContainsKey(map.NameId))
                 {
-                    raidsPerMap[map.name] = mapTotals[map.nameId];
+                    raidsPerMap[map.Name] = mapTotals[map.NameId];
                 }
             }
             return raidsPerMap;
         }
 
+        /// <summary>
+        /// Updates the database schema if it's not up to date.
+        /// </summary>
+        /// <remarks>
+        /// Checks if the profile_id field exists in each of the raid and flea sales tables.
+        /// If it doesn't exist, adds the field.
+        /// </remarks>
         private static void UpdateDatabase()
         {
             List<string> db_tables = new() { "raids", "flea_sales" };
@@ -183,7 +238,6 @@ namespace TarkovMonitor
                     command.CommandText = $"ALTER TABLE {tableName} ADD COLUMN profile_id VARCHAR(24)";
                     command.ExecuteNonQuery();
                 }
-
             }
         }
     }

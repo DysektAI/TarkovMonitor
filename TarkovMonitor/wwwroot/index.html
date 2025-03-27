@@ -1,27 +1,44 @@
-﻿<!DOCTYPE html>
+﻿<!-- Main HTML5 Document Declaration -->
+<!DOCTYPE html>
+<!-- Root HTML element with English language specification -->
 <html lang="en">
+
 <head>
+    <!-- Character encoding specification for proper text rendering -->
     <meta charset="utf-8" />
+    <!-- Responsive viewport settings for mobile device compatibility -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Application title displayed in browser tab -->
     <title>WinFormsBlazor</title>
+    <!-- Base URL configuration for Blazor routing -->
     <base href="/" />
+    <!-- Google Fonts - Roboto with various weights for consistent typography -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <!-- Application-specific CSS styles -->
     <link href="css/app.css" rel="stylesheet" />
+    <!-- MudBlazor UI Component Library CSS - Required for MudBlazor components -->
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+    <!-- Scoped styles specific to this Blazor application -->
     <link href="TarkovMonitor.styles.css" rel="stylesheet">
 </head>
 
 <body>
-
+    <!-- Root container for the Blazor application -->
+    <!-- Shows loading message while Blazor WebAssembly loads -->
     <div id="app">Loading...</div>
 
+    <!-- Error UI component - Hidden by default, shown when unhandled errors occur -->
     <div id="blazor-error-ui">
         An unhandled error has occurred.
+        <!-- Reload button for error recovery -->
         <a href="" class="reload">Reload</a>
+        <!-- Dismiss button to hide error message -->
         <a class="dismiss">🗙</a>
     </div>
 
+    <!-- Blazor WebView JavaScript file - Required for Blazor WebView functionality -->
     <script src="_framework/blazor.webview.js"></script>
+    <!-- MudBlazor JavaScript - Required for MudBlazor component interactivity -->
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 </body>
 

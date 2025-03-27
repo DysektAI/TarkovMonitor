@@ -8,306 +8,412 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace TarkovMonitor.Properties {
-    
-    
+namespace TarkovMonitor.Properties
+{
+
+
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.12.0.0")]
-    internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
-        
+    internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase
+    {
+
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
-        
-        public static Settings Default {
-            get {
+
+        public static Settings Default
+        {
+            get
+            {
                 return defaultInstance;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string tarkovTrackerToken {
-            get {
+        public string tarkovTrackerToken
+        {
+            get
+            {
                 return ((string)(this["tarkovTrackerToken"]));
             }
-            set {
+            set
+            {
                 this["tarkovTrackerToken"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool submitQueueTime {
-            get {
+        public bool submitQueueTime
+        {
+            get
+            {
                 return ((bool)(this["submitQueueTime"]));
             }
-            set {
+            set
+            {
                 this["submitQueueTime"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool raidStartAlert {
-            get {
+        public bool raidStartAlert
+        {
+            get
+            {
                 return ((bool)(this["raidStartAlert"]));
             }
-            set {
+            set
+            {
                 this["raidStartAlert"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool matchFoundAlert {
-            get {
+        public bool matchFoundAlert
+        {
+            get
+            {
                 return ((bool)(this["matchFoundAlert"]));
             }
-            set {
+            set
+            {
                 this["matchFoundAlert"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool restartTaskAlert {
-            get {
+        public bool restartTaskAlert
+        {
+            get
+            {
                 return ((bool)(this["restartTaskAlert"]));
             }
-            set {
+            set
+            {
                 this["restartTaskAlert"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool minimizeAtStartup {
-            get {
+        public bool minimizeAtStartup
+        {
+            get
+            {
                 return ((bool)(this["minimizeAtStartup"]));
             }
-            set {
+            set
+            {
                 this["minimizeAtStartup"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool upgradeRequired {
-            get {
+        public bool upgradeRequired
+        {
+            get
+            {
                 return ((bool)(this["upgradeRequired"]));
             }
-            set {
+            set
+            {
                 this["upgradeRequired"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string remoteId {
-            get {
+        public string remoteId
+        {
+            get
+            {
                 return ((string)(this["remoteId"]));
             }
-            set {
+            set
+            {
                 this["remoteId"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool autoNavigateMap {
-            get {
+        public bool autoNavigateMap
+        {
+            get
+            {
                 return ((bool)(this["autoNavigateMap"]));
             }
-            set {
+            set
+            {
                 this["autoNavigateMap"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool airFilterAlert {
-            get {
+        public bool airFilterAlert
+        {
+            get
+            {
                 return ((bool)(this["airFilterAlert"]));
             }
-            set {
+            set
+            {
                 this["airFilterAlert"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool stayOnTop {
-            get {
+        public bool stayOnTop
+        {
+            get
+            {
                 return ((bool)(this["stayOnTop"]));
             }
-            set {
+            set
+            {
                 this["stayOnTop"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool runthroughAlert {
-            get {
+        public bool runthroughAlert
+        {
+            get
+            {
                 return ((bool)(this["runthroughAlert"]));
             }
-            set {
+            set
+            {
                 this["runthroughAlert"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool navigateMapOnPositionUpdate {
-            get {
+        public bool navigateMapOnPositionUpdate
+        {
+            get
+            {
                 return ((bool)(this["navigateMapOnPositionUpdate"]));
             }
-            set {
+            set
+            {
                 this["navigateMapOnPositionUpdate"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool scavCooldownAlert {
-            get {
+        public bool scavCooldownAlert
+        {
+            get
+            {
                 return ((bool)(this["scavCooldownAlert"]));
             }
-            set {
+            set
+            {
                 this["scavCooldownAlert"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public int scavKarma {
-            get {
+        public int scavKarma
+        {
+            get
+            {
                 return ((int)(this["scavKarma"]));
             }
-            set {
+            set
+            {
                 this["scavKarma"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("-1")]
-        public int notificationsDevice {
-            get {
+        public int notificationsDevice
+        {
+            get
+            {
                 return ((int)(this["notificationsDevice"]));
             }
-            set {
+            set
+            {
                 this["notificationsDevice"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool minimizeToTray {
-            get {
+        public bool minimizeToTray
+        {
+            get
+            {
                 return ((bool)(this["minimizeToTray"]));
             }
-            set {
+            set
+            {
                 this["minimizeToTray"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool skipSplash {
-            get {
+        public bool skipSplash
+        {
+            get
+            {
                 return ((bool)(this["skipSplash"]));
             }
-            set {
+            set
+            {
                 this["skipSplash"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string customLogsPath {
-            get {
+        public string customLogsPath
+        {
+            get
+            {
                 return ((string)(this["customLogsPath"]));
             }
-            set {
+            set
+            {
                 this["customLogsPath"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string customMap {
-            get {
+        public string customMap
+        {
+            get
+            {
                 return ((string)(this["customMap"]));
             }
-            set {
+            set
+            {
                 this["customMap"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("{}")]
-        public string tarkovTrackerTokens {
-            get {
+        public string tarkovTrackerTokens
+        {
+            get
+            {
                 return ((string)(this["tarkovTrackerTokens"]));
             }
-            set {
+            set
+            {
                 this["tarkovTrackerTokens"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("00:07:10")]
-        public global::System.TimeSpan runthroughTime {
-            get {
+        public global::System.TimeSpan runthroughTime
+        {
+            get
+            {
                 return ((global::System.TimeSpan)(this["runthroughTime"]));
             }
-            set {
+            set
+            {
                 this["runthroughTime"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool automaticallyDeleteScreenshotsAfterRaid {
-            get {
+        public bool automaticallyDeleteScreenshotsAfterRaid
+        {
+            get
+            {
                 return ((bool)(this["automaticallyDeleteScreenshotsAfterRaid"]));
             }
-            set {
+            set
+            {
                 this["automaticallyDeleteScreenshotsAfterRaid"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool questItemsAlert {
-            get {
+        public bool questItemsAlert
+        {
+            get
+            {
                 return ((bool)(this["questItemsAlert"]));
             }
-            set {
+            set
+            {
                 this["questItemsAlert"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("tarkovtracker.io")]
+        public string tarkovTrackerDomain
+        {
+            get
+            {
+                return ((string)(this["tarkovTrackerDomain"]));
+            }
+            set
+            {
+                this["tarkovTrackerDomain"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string scavAvailableTime
+        {
+            get
+            {
+                return ((string)(this["scavAvailableTime"]));
+            }
+            set
+            {
+                this["scavAvailableTime"] = value;
             }
         }
     }

@@ -1,34 +1,54 @@
-﻿@using System.ComponentModel
+﻿@* 
+    ForceReadDialog.razor
+    This component provides a dialog interface for reading and processing historical game logs
+    from Escape from Tarkov. It allows users to select a previous point in time to read logs
+    and update their quest progress in Tarkov Tracker.
+
+    Dependencies:
+    - MessageLog: Service for displaying messages to the user
+    - GameWatcher: Service for monitoring the game state
+*@
+
+@using System.ComponentModel
 @using Humanizer
 @inject MessageLog messageLog
 @inject GameWatcher eft
+@implements IDisposable
 
 <MudDialog>
     <DialogContent>
+        @* Display current profile information to help user verify correct profile selection *@
         <MudText>
             Current profile: @eft.CurrentProfile.Id (@eft.CurrentProfile.Type)
         </MudText>
         <MudText>
             If you want to update progress for a different profile, activate that profile in the game.
         </MudText>
+        @* Only show log selection if we have a valid logs path *@
         @if (customWatcher.LogsPath != "")
         {
             if (breakpoints != null)
             {
-                <MudSelect @bind-Value="selectedBreakpoint" Label="Read previous logs" HelperText="Choose the starting point from which to read logs" OpenIcon="@Icons.Material.Filled.TextSnippet" AdornmentColor="Color.Secondary">
+                @* Dropdown to select the starting point for log reading *@
+                <MudSelect @bind-Value="selectedBreakpoint" Label="Read previous logs"
+                    HelperText="Choose the starting point from which to read logs" OpenIcon="@Icons.Material.Filled.TextSnippet"
+                    AdornmentColor="Color.Secondary">
                     @foreach (LogDetails breakpoint in breakpoints)
                     {
-                        <MudSelectItem Value="@breakpoint">@breakpoint.Version | @breakpoint.Date.ToLongDateString() - @breakpoint.Date.Humanize()</MudSelectItem>
+                        <MudSelectItem Value="@breakpoint">@breakpoint.Version | @breakpoint.Date.ToLongDateString() -
+                            @breakpoint.Date.Humanize()</MudSelectItem>
                     }
                 </MudSelect>
-                <p>Select a starting point to read previous logs and update your quest progress. All logs from that point forward for the same will be read and that cumulative progress will be synced to Tarkov Tracker.</p>
-                <p><strong>WARNING: </strong>You can mess up your Tarkov Tracker saved quest progress if you pick an invalid starting date, so proceed with caution.</p>
+                <p>Select a starting point to read previous logs and update your quest progress. All logs from that point
+                    forward for the same will be read and that cumulative progress will be synced to Tarkov Tracker.</p>
+                <p><strong>WARNING: </strong>You can mess up your Tarkov Tracker saved quest progress if you pick an invalid
+                    starting date, so proceed with caution.</p>
             }
             else
             {
+                @* Show loading indicator while fetching breakpoints *@
                 <MudProgressCircular Color="Color.Info" Indeterminate="true" />
             }
-            
         }
         else
         {
@@ -40,20 +60,33 @@
         <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
     </DialogActions>
 </MudDialog>
-@code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
 
+@code {
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+
+    // Custom watcher instance for processing game logs
     internal GameWatcher customWatcher = new();
+
+    // Selected breakpoint for log processing
     LogDetails? selectedBreakpoint;
+
+    // List of available log breakpoints
     List<LogDetails>? breakpoints;
+
+    // Dictionary to track task status changes
     Dictionary<string, TarkovMonitor.TaskStatus> TaskStatuses = new();
+
+    // Event handler for property changes
+    private PropertyChangedEventHandler? propertyChangedHandler;
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
+        // Initialize breakpoints asynchronously
         Task.Run(GetBreakPoints);
 
-        Properties.Settings.Default.PropertyChanged += (object? sender, PropertyChangedEventArgs e) =>
+        // Set up property change handler for custom logs path
+        propertyChangedHandler = (object? sender, PropertyChangedEventArgs e) =>
         {
             if (e.PropertyName == "customLogsPath")
             {
@@ -61,19 +94,25 @@
                 Task.Run(GetBreakPoints);
             }
         };
+        Properties.Settings.Default.PropertyChanged += propertyChangedHandler;
     }
 
+    // Fetches available log breakpoints for the current profile
     private void GetBreakPoints()
     {
         breakpoints = customWatcher.GetLogBreakpoints(eft.CurrentProfile.Id);
         InvokeAsync(() => StateHasChanged());
     }
 
-    void Cancel() => MudDialog.Cancel();
+    // Handles dialog cancellation
+    void Cancel() => MudDialog?.Cancel();
 
-    public async void Submit()
+    // Processes the selected logs and updates Tarkov Tracker
+    public async Task Submit()
     {
-        // Check if a path was selected, and if so, load the logs from that path
+        if (MudDialog == null) return;
+
+        // Validate selection and Tarkov Tracker token
         if (selectedBreakpoint == null)
         {
             return;
@@ -81,49 +120,66 @@
         if (!TarkovTracker.ValidToken)
         {
             messageLog.AddMessage("You must have a valid Tarkov Tracker API token to read past logs.", "exception");
+            return;
         }
+
+        // Clear previous task statuses and prepare for updates
         TaskStatuses.Clear();
         Dictionary<string, TarkovMonitor.TaskStatus> updateTasks = new();
+
         try
         {
-            //eft.ProcessLogs(selectedPath);
+            // Process logs and track task modifications
             customWatcher.TaskModified += UpdateTaskStatus;
-            customWatcher.ProcessLogsFromBreakpoint(selectedBreakpoint);
-            customWatcher.TaskModified -= UpdateTaskStatus;
+            try
+            {
+                await customWatcher.ProcessLogsFromBreakpoint(selectedBreakpoint);
+            }
+            finally
+            {
+                customWatcher.TaskModified -= UpdateTaskStatus;
+            }
+
+            // Compare and prepare task updates
             foreach (var kvp in TaskStatuses)
             {
                 if (kvp.Value == TarkovMonitor.TaskStatus.Started)
                 {
-                    // don't update task status if started
+                    // Skip tasks that are only started
                     continue;
                 }
-                var task = TarkovDev.Tasks.Find((t) => t.id == kvp.Key);
+
+                var task = TarkovDev.Tasks.Find((t) => t.Id == kvp.Key);
                 if (task == null)
                 {
-                    // probably a daily
+                    // Skip daily tasks or unknown tasks
                     continue;
                 }
+
+                // Get current task status from Tarkov Tracker
                 TarkovMonitor.TaskStatus savedTaskStatus = TarkovMonitor.TaskStatus.None;
-                var taskProgress = TarkovTracker.Progress.data.tasksProgress.Find((prog) => prog.id == kvp.Key);
+                var taskProgress = TarkovTracker.Progress.Data.TasksProgress.Find((prog) => prog.Id == kvp.Key);
                 if (taskProgress != null)
                 {
-                    if (taskProgress.failed)
+                    if (taskProgress.Failed)
                     {
                         savedTaskStatus = TarkovMonitor.TaskStatus.Failed;
                     }
-                    if (taskProgress.complete)
+                    if (taskProgress.Complete)
                     {
                         savedTaskStatus = TarkovMonitor.TaskStatus.Finished;
                     }
                 }
+
+                // Only update if status has changed
                 if (kvp.Value == savedTaskStatus)
                 {
-                    // status matches, so don't update
                     continue;
                 }
+
+                // Add task to update queue and log the change
                 updateTasks.Add(kvp.Key, kvp.Value);
-                //System.Diagnostics.Debug.WriteLine($"Task {kvp.Key} should be {kvp.Value}");
-                messageLog.AddMessage($"{kvp.Value} task {task.name}", "quest", $"https://tarkov.dev/task/{task.normalizedName}");
+                messageLog.AddMessage($"{kvp.Value} task {task.Name}", "quest", $"https://tarkov.dev/task/{task.NormalizedName}");
             }
         }
         catch (Exception ex)
@@ -131,6 +187,8 @@
             messageLog.AddMessage($"Error finding task updates: {ex.Message}", "exception");
             return;
         }
+
+        // Submit updates to Tarkov Tracker
         try
         {
             if (updateTasks.Count > 0)
@@ -150,8 +208,21 @@
         }
     }
 
+    // Event handler for task status updates
     private void UpdateTaskStatus(object? sender, LogContentEventArgs<TaskStatusMessageLogContent> e)
     {
-        TaskStatuses[e.LogContent.TaskId] = e.LogContent.Status;
+        if (e.LogContent?.TaskId != null)
+        {
+            TaskStatuses[e.LogContent.TaskId] = e.LogContent.Status;
+        }
+    }
+
+    // Cleanup event handlers on component disposal
+    public void Dispose()
+    {
+        if (propertyChangedHandler != null)
+        {
+            Properties.Settings.Default.PropertyChanged -= propertyChangedHandler;
+        }
     }
 }

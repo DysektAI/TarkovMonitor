@@ -1,30 +1,51 @@
 ﻿@page "/group"
 @using System.Diagnostics
-@using TarkovMonitor.GroupLoadout
+@using TarkovMonitor
+@using TarkovMonitor.Groups
 @inject GameWatcher eft
 @inject GroupManager groupManager
 @layout AppLayout
 @implements IDisposable
 
+@* 
+    Main component for displaying group/party member information in Tarkov Monitor
+    This component shows detailed loadout information for each member in the group
+    using a tabbed interface where each tab represents a different group member.
+*@
 <MudGrid Class="pa-3" Spacing="0">
-	<MudItem xs="12">
+    <MudItem xs="12">
+        @* Display an info message if no group members are present *@
         @if (groupManager.GroupMembers.Count == 0)
         {
             <MudAlert Severity="Severity.Info">You aren't in a group or have party members yet.</MudAlert>
-        }else{
+        }
+        else
+        {
+            @* Create a tabbed interface where each group member gets their own tab *@
             <MudTabs Elevation="3" Rounded="true" Centered="true" PanelClass="pa-3">
                 @foreach (KeyValuePair<string, GroupMember> member in groupManager.GroupMembers)
                 {
                     <MudTabPanel Text="@member.Key" Icon="@Icons.Material.Filled.Person">
+                        @* Header section displaying member's basic information *@
                         <div class="d-flex justify-space-between align-center">
-                            <div class="d-flex align-center"><LevelIcon Level="@member.Value.Loadout.Info.Level" Width="48" /><MudText Typo="Typo.h4">@member.Value.Loadout.Info.Level</MudText></div>
-                            <div><MudText Typo="Typo.h4">@member.Value.Loadout.Info.Nickname</MudText></div>
-                            <div><MudText Typo="Typo.h4">@member.Value.Loadout.Info.Side.ToUpper()</MudText></div>
+                            @* Left section: Player Level *@
+                            <div class="d-flex align-center">
+                                <LevelIcon Level="@member.Value.Loadout.Info.Level" Width="48" />
+                                <MudText Typo="Typo.h4">@member.Value.Loadout.Info.Level</MudText>
+                            </div>
+                            @* Center section: Player Nickname *@
+                            <div>
+                                <MudText Typo="Typo.h4">@member.Value.Loadout.Info.Nickname</MudText>
+                            </div>
+                            @* Right section: Player Side (BEAR/USEC) *@
+                            <div>
+                                <MudText Typo="Typo.h4">@member.Value.Loadout.Info.Side.ToUpper()</MudText>
+                            </div>
                         </div>
+                        @* Equipment section: Displays the player's loadout items recursively *@
                         <div>
                             @foreach (LoadoutItem item in parentItems(member.Value.Loadout.Equipment.Items))
                             {
-
                                 <LoadoutRecursor Loadout="@member.Value.Loadout.Equipment.Items" Item="item" />
                             }
                         </div>
@@ -32,23 +53,38 @@
                 }
             </MudTabs>
         }
-	</MudItem>
+    </MudItem>
 </MudGrid>
 
 @code {
-    [CascadingParameter(Name="AppLayout")]
-    public AppLayout AppLayout { get; set; }
+    /// <summary>
+    /// Reference to the parent AppLayout component for managing page title and layout
+    /// </summary>
+    [CascadingParameter(Name = "AppLayout")]
+    public AppLayout AppLayout { get; set; } = default!;
 
+    /// <summary>
+    /// Initializes the component with base initialization
+    /// </summary>
     protected override void OnInitialized()
     {
         base.OnInitialized();
     }
 
+    /// <summary>
+    /// Handles parameter updates in the component lifecycle
+    /// </summary>
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
     }
 
+    /// <summary>
+    /// Performs setup after the component is rendered
+    /// - Sets the page title
+    /// - Subscribes to group member change events
+    /// </summary>
+    /// <param name="firstRender">Indicates if this is the first time the component is being rendered</param>
     protected override void OnAfterRender(bool firstRender)
     {
         base.OnAfterRender(firstRender);
@@ -59,21 +95,49 @@
         }
     }
 
+    /// <summary>
+    /// Filters and returns top-level inventory items from the loadout.
+    /// This method identifies items that are directly equipped or in the main inventory,
+    /// excluding nested container contents.
+    /// </summary>
+    /// <param name="loadout">Array of all loadout items for a player</param>
+    /// <returns>Array of parent/top-level items that are directly equipped or in main inventory</returns>
     public LoadoutItem[] parentItems(LoadoutItem[] loadout)
     {
+        // Find the default inventory container (main inventory space)
+        // The ID "55d7217a4bdc2d86028b456d" represents the main inventory container in Tarkov
         LoadoutItem defaultInventory = loadout.Where(i => i._tpl == "55d7217a4bdc2d86028b456d").First();
-        LoadoutItem pocketInventory = loadout.Where(i => i._tpl == "627a4e6b255f7527fb05a0f6" || i._tpl == "557ffd194bdc2d28148b457f").FirstOrDefault();
-        return loadout.Where(i => (i.parentId == defaultInventory._id || i.parentId == pocketInventory?._id) && i._id != pocketInventory?._id).ToArray();
+
+        // Find the pocket inventory if it exists
+        // The IDs represent different types of pocket containers in Tarkov
+        LoadoutItem? pocketInventory = loadout.Where(i => i._tpl == "627a4e6b255f7527fb05a0f6" || i._tpl ==
+        "557ffd194bdc2d28148b457f").FirstOrDefault();
+
+        // Return items that are direct children of either default inventory or pocket inventory
+        // excluding the pocket inventory container itself to avoid redundancy
+        return loadout.Where(i => (i.ParentId == defaultInventory._id || i.ParentId == pocketInventory?._id) && i._id !=
+        pocketInventory?._id).ToArray();
     }
 
-    // React to GroupManager update events
+    /// <summary>
+    /// Event handler for group member changes.
+    /// Triggers a UI refresh when the group composition changes, such as when:
+    /// - A new member joins the group
+    /// - A member leaves the group
+    /// - A member's loadout is updated
+    /// </summary>
+    /// <param name="sender">The source of the event</param>
+    /// <param name="e">Event arguments containing group member change details</param>
     public void OnGroupMemberChanged(object? sender, GroupMemberChangedArgs e)
     {
         InvokeAsync(StateHasChanged);
     }
 
-	public void Dispose()
-	{
-	}
-
+    /// <summary>
+    /// Implements IDisposable to clean up resources when the component is disposed
+    /// TODO: Unsubscribe from GroupMemberChanged event when implementing proper cleanup
+    /// </summary>
+    public void Dispose()
+    {
+    }
 }

@@ -1,43 +1,305 @@
-﻿@page "/"
+﻿@* 
+    Dashboard.razor
+    This component serves as the main dashboard/home page of the application.
+    It provides a central view for monitoring and displaying game-related information.
+*@
+
+@* Route: Default landing page *@
+@page "/"
+@* Route: Alternative access via /app *@
 @page "/app"
+@* Required for diagnostic functionality *@
 @using System.Diagnostics
+@using TarkovMonitor.Blazor.Components
+@using TarkovMonitor
+
+@* Dependency Injection for required services *@
+@* Service for monitoring EFT game state *@
 @inject GameWatcher eft
+@* Service for handling application messages/logs *@
 @inject MessageLog messageLog
+@* Service for managing timers *@
+@inject TimersManager timersManager
+
+@* Specifies the layout template to be used for this component *@
 @layout AppLayout
+
+@* Implements IDisposable to properly cleanup resources when component is destroyed *@
 @implements IDisposable
 
+@* 
+    Main layout grid structure
+    Uses MudBlazor's grid system with no padding and spacing
+*@
 <MudGrid Class="pa-0" Spacing="0">
-	<MudItem xs="12">
+    <MudItem xs="12">
+        @* MessageBoard component displays system messages and notifications *@
         <MessageBoard>
         </MessageBoard>
-	</MudItem>
+    </MudItem>
+
+    @* Add Flea Market Sales Section *@
+    <MudItem xs="12">
+        <MudPaper Class="pa-4 ma-2 mx-4" Elevation="3">
+            <MudText Typo="Typo.h6">Flea Market Sales</MudText>
+            @if (recentSales.Count > 0)
+            {
+                <MudList Dense="true">
+                    @foreach (var sale in recentSales)
+                    {
+                        <MudListItem>
+                            <MudText>
+                                <b>@sale.BuyerName</b> bought <b>@sale.ItemName</b> for <b>₽@sale.Price.ToString("N0")</b>
+                            </MudText>
+                            <MudText Typo="Typo.caption">@sale.Timestamp.ToString("g")</MudText>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+            else
+            {
+                <MudText>No recent sales</MudText>
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* Timers Section *@
+    <MudItem xs="12">
+        <MudPaper Class="pa-2 ma-2 mx-4" Elevation="3">
+            @* Header section with timer icon *@
+            <MudText Typo="Typo.h6" Class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.Timer" Class="mr-2" />Timers
+            </MudText>
+            @* List of timer values displayed to the user *@
+            <MudList T="string">
+                <MudListItem>Time In Raid: @TimeInRaidTime</MudListItem>
+                <MudListItem>Runthrough Period: @RunThroughRemainingTime</MudListItem>
+                <MudListItem>Scav Cooldown: @ScavCooldownTime</MudListItem>
+            </MudList>
+        </MudPaper>
+    </MudItem>
 </MudGrid>
 
 @code {
-    [CascadingParameter(Name="AppLayout")]
-    public AppLayout AppLayout { get; set; }
+    @* 
+        Cascading parameter to access the parent AppLayout
+        This allows communication between the Dashboard and its layout container
+    *@
+    [CascadingParameter(Name = "AppLayout")]
+    public AppLayout AppLayout { get; set; } = default!;
 
+    // Store recent flea market sales
+    private List<FleaMarketSale> recentSales = new();
+
+    // Timer state variables to track different game timers
+    private TimeSpan RunThroughRemainingTime;
+    private TimeSpan TimeInRaidTime;
+    private TimeSpan ScavCooldownTime;
+
+    // Data structure for tracking flea market sales
+    private class FleaMarketSale
+    {
+        public string ItemName { get; set; } = "";
+        public string BuyerName { get; set; } = "";
+        public long Price { get; set; }
+        public DateTime Timestamp { get; set; } = DateTime.Now;
+    }
+
+    @* 
+        OnInitialized: First lifecycle method called
+        Handles component initialization logic
+    *@
     protected override void OnInitialized()
     {
         base.OnInitialized();
-    }
 
-    protected override void OnParametersSet()
-    {
-        base.OnParametersSet();
-    }
+        // Add message to confirm Dashboard initialization
+        messageLog.AddMessage("Dashboard initialized and waiting for flea market sales...");
 
-    protected override void OnAfterRender(bool firstRender)
-    {
-        base.OnAfterRender(firstRender);
-        if (firstRender)
+        // Use wrapper methods instead of direct event subscription
+        eft.SubscribeToFleaSold(OnFleaSold);
+        
+        // Also subscribe to the direct flea sale event
+        eft.SubscribeToDirectFleaSold(OnDirectFleaSold);
+
+        // Log current handler count using a wrapper method
+        Console.WriteLine($"===== [Dashboard] Number of FleaSold event handlers: {eft.GetFleaSoldHandlerCount()} =====");
+        Console.WriteLine($"===== [Dashboard] Number of DirectFleaSold event handlers: {eft.GetDirectFleaSoldHandlerCount()} =====");
+
+        // Subscribe to timer update events from TimersManager
+        timersManager.RaidTimerChanged += TimersManager_RaidTimerChanged;
+        timersManager.RunThroughTimerChanged += TimersManager_RunThroughTimerChanged;
+        timersManager.ScavCooldownTimerChanged += TimersManager_ScavCooldownTimerChanged;
+
+        // Ensure API data is initialized during startup
+        if (TarkovDev.Traders.Count == 0 || TarkovDev.Maps.Count == 0 || TarkovDev.Items.Count == 0)
         {
-            AppLayout.SetTitle("Dashboard");
+            _ = Task.Run(async () => await TarkovDev.Initialize());
         }
     }
 
-	public void Dispose()
-	{
-	}
+    // Handle flea market sale events
+    private void OnFleaSold(object? sender, LogContentEventArgs<FleaSoldMessageLogContent> e)
+    {
+        try
+        {
+            Console.WriteLine("===== [Dashboard] OnFleaSold handler called =====");
+            
+            if (e == null)
+            {
+                Console.WriteLine("===== [Dashboard] OnFleaSold event args are null =====");
+                messageLog.AddMessage("Error: Received null event args for flea market sale", "error");
+                return;
+            }
 
+            if (e.LogContent == null)
+            {
+                Console.WriteLine("===== [Dashboard] OnFleaSold LogContent is null =====");
+                messageLog.AddMessage("Error: Received null LogContent for flea market sale", "error");
+                return;
+            }
+
+            Console.WriteLine($"===== [Dashboard] Processing flea sale from {e.LogContent.Buyer} for item {e.LogContent.SoldItemId} =====");
+            
+            // Get price from ReceivedItems (usually the first item is roubles)
+            long price = 0;
+            
+            if (e.LogContent.ReceivedItems != null && e.LogContent.ReceivedItems.Count > 0)
+            {
+                Console.WriteLine($"===== [Dashboard] Found {e.LogContent.ReceivedItems.Count} received items =====");
+                
+                foreach (var item in e.LogContent.ReceivedItems)
+                {
+                    // Usually '5449016a4bdc2d6f028b456f' is the ID for roubles
+                    if (item.Key == "5449016a4bdc2d6f028b456f")
+                    {
+                        price = item.Value;
+                        Console.WriteLine($"===== [Dashboard] Found rouble payment of {price} =====");
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("===== [Dashboard] ReceivedItems is null or empty =====");
+            }
+
+            var newSale = new FleaMarketSale
+            {
+                ItemName = e.LogContent.SoldItemId,
+                BuyerName = e.LogContent.Buyer,
+                Price = price,
+                Timestamp = DateTime.Now
+            };
+            
+            Console.WriteLine($"===== [Dashboard] Adding new sale - Buyer: {newSale.BuyerName}, Item: {newSale.ItemName}, Price: {newSale.Price} =====");
+            messageLog.AddMessage($"FLEA SALE: {newSale.BuyerName} bought {newSale.ItemName} for ₽{newSale.Price:N0}", "flea");
+            
+            recentSales.Insert(0, newSale);
+
+            // Keep only recent sales (last 10)
+            if (recentSales.Count > 10)
+            {
+                recentSales.RemoveAt(recentSales.Count - 1);
+            }
+            
+            Console.WriteLine($"===== [Dashboard] Total sales count after adding: {recentSales.Count} =====");
+
+            // Force UI update
+            _ = InvokeAsync(() =>
+            {
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"===== [Dashboard] Exception in OnFleaSold: {ex.Message} =====");
+            Console.WriteLine($"===== [Dashboard] Stack trace: {ex.StackTrace} =====");
+            messageLog.AddMessage($"Error processing flea market sale: {ex.Message}", "error");
+        }
+    }
+
+    // Handle direct flea market sale events 
+    private void OnDirectFleaSold(object? sender, ManualFleaSoldEventArgs e)
+    {
+        try
+        {
+            Console.WriteLine("===== [Dashboard] OnDirectFleaSold handler called =====");
+            
+            // Create a new sale record
+            var newSale = new FleaMarketSale
+            {
+                ItemName = e.ItemName,
+                BuyerName = e.BuyerName,
+                Price = 0, // We don't have price info from the direct detection
+                Timestamp = e.Timestamp
+            };
+            
+            Console.WriteLine($"===== [Dashboard] Direct flea sale - Buyer: {newSale.BuyerName}, Item: {newSale.ItemName} =====");
+            messageLog.AddMessage($"FLEA SALE: {newSale.BuyerName} bought {newSale.ItemName}", "flea");
+            
+            recentSales.Insert(0, newSale);
+
+            // Keep only recent sales (last 10)
+            if (recentSales.Count > 10)
+            {
+                recentSales.RemoveAt(recentSales.Count - 1);
+            }
+            
+            Console.WriteLine($"===== [Dashboard] Total sales count after adding: {recentSales.Count} =====");
+
+            // Force UI update
+            _ = InvokeAsync(() =>
+            {
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"===== [Dashboard] Exception in OnDirectFleaSold: {ex.Message} =====");
+            Console.WriteLine($"===== [Dashboard] Stack trace: {ex.StackTrace} =====");
+            messageLog.AddMessage($"Error processing direct flea market sale: {ex.Message}", "error");
+        }
+    }
+
+    /// <summary>
+    /// Event handler for raid timer updates.
+    /// Updates the TimeInRaidTime and triggers a UI refresh.
+    /// </summary>
+    private async void TimersManager_RaidTimerChanged(object? sender, TimerChangedEventArgs e)
+    {
+        TimeInRaidTime = e.TimerValue;
+        await InvokeAsync(() => StateHasChanged());
+    }
+
+    /// <summary>
+    /// Event handler for run-through timer updates.
+    /// Updates the RunThroughRemainingTime and triggers a UI refresh.
+    /// </summary>
+    private async void TimersManager_RunThroughTimerChanged(object? sender, TimerChangedEventArgs e)
+    {
+        RunThroughRemainingTime = e.TimerValue;
+        await InvokeAsync(() => StateHasChanged());
+    }
+
+    /// <summary>
+    /// Event handler for scav cooldown timer updates.
+    /// Updates the ScavCooldownTime and triggers a UI refresh.
+    /// </summary>
+    private async void TimersManager_ScavCooldownTimerChanged(object? sender, TimerChangedEventArgs e)
+    {
+        ScavCooldownTime = e.TimerValue;
+        await InvokeAsync(() => StateHasChanged());
+    }
+
+    // Cleanup method to unsubscribe from events when component is disposed
+    public void Dispose()
+    {
+        // Use wrapper method to unsubscribe
+        eft.UnsubscribeFromFleaSold(OnFleaSold);
+        eft.UnsubscribeFromDirectFleaSold(OnDirectFleaSold);
+        timersManager.RaidTimerChanged -= TimersManager_RaidTimerChanged;
+        timersManager.RunThroughTimerChanged -= TimersManager_RunThroughTimerChanged;
+        timersManager.ScavCooldownTimerChanged -= TimersManager_ScavCooldownTimerChanged;
+    }
 }

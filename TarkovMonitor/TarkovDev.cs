@@ -1,13 +1,24 @@
 ﻿using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
 using Refit;
+using System.Diagnostics;
 
 namespace TarkovMonitor
 {
+    /// <summary>
+    /// Main class for interacting with the Tarkov.dev API services.
+    /// This class provides functionality to fetch game data, submit player statistics,
+    /// and manage various game-related information for Escape from Tarkov.
+    /// </summary>
     internal class TarkovDev
     {
+        // GraphQL client for the main Tarkov.dev API
         private static readonly GraphQLHttpClient client = new("https://api.tarkov.dev/graphql", new SystemTextJsonSerializer());
 
+        /// <summary>
+        /// Interface for the Tarkov.dev data submission API endpoints.
+        /// Handles queue times and goon sightings submissions.
+        /// </summary>
         internal interface ITarkovDevAPI
         {
             [Post("/queue")]
@@ -17,6 +28,10 @@ namespace TarkovMonitor
         }
         private static ITarkovDevAPI api = RestService.For<ITarkovDevAPI>("https://manager.tarkov.dev/api");
 
+        /// <summary>
+        /// Interface for the Tarkov.dev player-related API endpoints.
+        /// Provides functionality to search players and retrieve player profiles.
+        /// </summary>
         internal interface ITarkovDevPlayersAPI
         {
             [Get("/name/{name}")]
@@ -26,23 +41,70 @@ namespace TarkovMonitor
         }
         private static ITarkovDevPlayersAPI playersApi = RestService.For<ITarkovDevPlayersAPI>("https://player.tarkov.dev");
 
-        private static readonly System.Timers.Timer updateTimer = new() {
+        // Timer for automatic data updates, runs every 20 minutes
+        private static readonly System.Timers.Timer updateTimer = new()
+        {
             AutoReset = true,
-            Enabled = false, 
+            Enabled = false,
             Interval = TimeSpan.FromMinutes(20).TotalMilliseconds
         };
 
-        public static List<Task> Tasks { get; private set; } = new();
-        public static List<Map> Maps { get; private set; } = new();
-        public static List<Item> Items { get; private set; } = new();
-        public static List<Trader> Traders { get; private set; } = new();
-        public static List<HideoutStation> Stations { get; private set; } = new();
-        public static List<PlayerLevel> PlayerLevels { get; private set; } = new();
-        public static DateTime ScaveAvailableTime { get; set; } = DateTime.Now;
+        // Static collections to store game data
+        public static List<Task> Tasks { get; private set; } = new();          // Game tasks/quests
+        public static List<Map> Maps { get; private set; } = new();           // Game maps
+        public static List<Item> Items { get; private set; } = new();         // In-game items
+        public static List<Trader> Traders { get; private set; } = new();     // Game traders
+        public static List<HideoutStation> Stations { get; private set; } = new(); // Hideout stations
+        public static List<PlayerLevel> PlayerLevels { get; private set; } = new(); // Experience levels
+        public static DateTime ScavAvailableTime { get; set; } = DateTime.Now; // Next available scav run time
 
+        /// <summary>
+        /// Initializes static data when class is loaded
+        /// </summary>
+        static TarkovDev()
+        {
+            // Load ScavAvailableTime from settings if available
+            if (!string.IsNullOrEmpty(Properties.Settings.Default.scavAvailableTime))
+            {
+                try
+                {
+                    ScavAvailableTime = DateTime.Parse(Properties.Settings.Default.scavAvailableTime);
+                }
+                catch
+                {
+                    // If parsing fails, keep the default (now)
+                }
+            }
+        }
+
+        /// <summary>
+        /// Initializes the TarkovDev API data and starts automatic updates.
+        /// This ensures all game data is loaded at application startup.
+        /// </summary>
+        public static async System.Threading.Tasks.Task Initialize()
+        {
+            try
+            {
+                await UpdateApiData();
+                await GetPlayerLevels();
+                StartAutoUpdates();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error initializing TarkovDev API data: {ex.Message}");
+                // Still attempt to start automatic updates even if initial load fails
+                StartAutoUpdates();
+            }
+        }
+
+        /// <summary>
+        /// Fetches all available tasks/quests from the Tarkov.dev API.
+        /// Includes task details, requirements, and fail conditions.
+        /// </summary>
         public async static Task<List<Task>> GetTasks()
         {
-            var request = new GraphQL.GraphQLRequest() {
+            var request = new GraphQL.GraphQLRequest()
+            {
                 Query = @"
                     query TarkovMonitorTasks {
                         tasks {
@@ -64,10 +126,14 @@ namespace TarkovMonitor
                 "
             };
             var response = await client.SendQueryAsync<TasksResponse>(request);
-            Tasks = response.Data.tasks;
+            Tasks = response.Data.Tasks;
             return Tasks;
         }
 
+        /// <summary>
+        /// Retrieves all available maps and their associated boss spawn information.
+        /// Maps are sorted alphabetically by name.
+        /// </summary>
         public async static Task<List<Map>> GetMaps()
         {
             var request = new GraphQL.GraphQLRequest()
@@ -94,10 +160,15 @@ namespace TarkovMonitor
                 "
             };
             var response = await client.SendQueryAsync<MapsResponse>(request);
-            Maps = response.Data.maps;
-            Maps.Sort((a, b) => a.name.CompareTo(b.name));
+            Maps = response.Data.Maps;
+            Maps.Sort((a, b) => a.Name.CompareTo(b.Name));
             return Maps;
         }
+
+        /// <summary>
+        /// Fetches all items from the game, including their properties, dimensions, and images.
+        /// Special handling for weapon presets to use their correct dimensions and images.
+        /// </summary>
         public async static Task<List<Item>> GetItems()
         {
             var request = new GraphQL.GraphQLRequest()
@@ -127,24 +198,29 @@ namespace TarkovMonitor
                         }
                     }
                 "
-			};
+            };
             var response = await client.SendQueryAsync<ItemsResponse>(request);
-            Items = response.Data.items;
+            Items = response.Data.Items;
             foreach (var item in Items)
             {
-                if (item.types.Contains("gun"))
+                if (item.Types.Contains("gun"))
                 {
-                    if (item.properties?.defaultPreset != null)
+                    if (item.Properties?.DefaultPreset != null)
                     {
-                        item.width = item.properties.defaultPreset.width;
-                        item.height = item.properties.defaultPreset.height;
-                        item.iconLink = item.properties.defaultPreset.iconLink;
-                        item.gridImageLink = item.properties.defaultPreset.gridImageLink;
+                        item.Width = item.Properties.DefaultPreset.Width;
+                        item.Height = item.Properties.DefaultPreset.Height;
+                        item.IconLink = item.Properties.DefaultPreset.IconLink;
+                        item.GridImageLink = item.Properties.DefaultPreset.GridImageLink;
                     }
                 }
             }
             return Items;
         }
+
+        /// <summary>
+        /// Retrieves all traders and their reputation levels.
+        /// Includes special handling for Fence trader reputation affecting scav cooldowns.
+        /// </summary>
         public async static Task<List<Trader>> GetTraders()
         {
             var request = new GraphQL.GraphQLRequest()
@@ -166,9 +242,14 @@ namespace TarkovMonitor
                 "
             };
             var response = await client.SendQueryAsync<TradersResponse>(request);
-            Traders = response.Data.traders;
+            Traders = response.Data.Traders;
             return Traders;
         }
+
+        /// <summary>
+        /// Fetches all hideout stations and their upgrade levels.
+        /// Includes station bonuses and requirements.
+        /// </summary>
         public async static Task<List<HideoutStation>> GetHideout()
         {
             var request = new GraphQL.GraphQLRequest()
@@ -195,12 +276,16 @@ namespace TarkovMonitor
                 "
             };
             var response = await client.SendQueryAsync<HideoutResponse>(request);
-            Stations = response.Data.hideoutStations;
+            Stations = response.Data.HideoutStations;
             return Stations;
         }
+
+        /// <summary>
+        /// Updates all API data concurrently by fetching tasks, maps, items, traders, and hideout information.
+        /// </summary>
         public async static System.Threading.Tasks.Task UpdateApiData()
         {
-            List<System.Threading.Tasks.Task> tasks = new() { 
+            List<System.Threading.Tasks.Task> tasks = new() {
                 GetTasks(),
                 GetMaps(),
                 GetItems(),
@@ -209,6 +294,10 @@ namespace TarkovMonitor
             };
             await System.Threading.Tasks.Task.WhenAll(tasks);
         }
+
+        /// <summary>
+        /// Retrieves the experience requirements for all player levels.
+        /// </summary>
         public async static Task<List<PlayerLevel>> GetPlayerLevels()
         {
             var request = new GraphQL.GraphQLRequest()
@@ -223,15 +312,23 @@ namespace TarkovMonitor
                 "
             };
             var response = await client.SendQueryAsync<PlayerLevelsResponse>(request);
-            PlayerLevels = response.Data.playerLevels;
+            PlayerLevels = response.Data.PlayerLevels;
             return PlayerLevels;
         }
 
+        /// <summary>
+        /// Submits queue time data to the API for matchmaking statistics.
+        /// </summary>
+        /// <param name="mapNameId">The ID of the map</param>
+        /// <param name="queueTime">Time spent in queue in seconds</param>
+        /// <param name="type">Queue type</param>
+        /// <param name="gameMode">Game mode (PMC/Scav)</param>
+        /// <returns>API response indicating submission status</returns>
         public async static Task<DataSubmissionResponse> PostQueueTime(string mapNameId, int queueTime, string type, ProfileType gameMode)
         {
             try
             {
-                return await api.SubmitQueueTime(new QueueTimeBody() { map = mapNameId, time = queueTime, type = type, gameMode = gameMode.ToString().ToLower() });
+                return await api.SubmitQueueTime(new QueueTimeBody() { Map = mapNameId, Time = queueTime, Type = type, GameMode = gameMode.ToString().ToLower() });
             }
             catch (ApiException ex)
             {
@@ -247,11 +344,19 @@ namespace TarkovMonitor
             }
         }
 
+        /// <summary>
+        /// Submits a goon squad sighting to the API.
+        /// </summary>
+        /// <param name="mapNameId">The ID of the map where goons were spotted</param>
+        /// <param name="date">Time of the sighting</param>
+        /// <param name="accountId">Player's account ID</param>
+        /// <param name="profileType">Player's profile type (PMC/Scav)</param>
+        /// <returns>API response indicating submission status</returns>
         public async static Task<DataSubmissionResponse> PostGoonsSighting(string mapNameId, DateTime date, int accountId, ProfileType profileType)
         {
             try
             {
-                return await api.SubmitGoonsSighting(new GoonsBody() { map = mapNameId, gameMode = profileType.ToString().ToLower(), timestamp = ((DateTimeOffset)date).ToUnixTimeMilliseconds(), accountId = accountId });
+                return await api.SubmitGoonsSighting(new GoonsBody() { Map = mapNameId, GameMode = profileType.ToString().ToLower(), Timestamp = ((DateTimeOffset)date).ToUnixTimeMilliseconds(), AccountId = accountId });
             }
             catch (ApiException ex)
             {
@@ -267,20 +372,25 @@ namespace TarkovMonitor
             }
         }
 
+        /// <summary>
+        /// Retrieves a player's current experience points from the API.
+        /// </summary>
+        /// <param name="accountId">Player's account ID</param>
+        /// <returns>Player's current experience points</returns>
         public async static Task<int> GetExperience(int accountId)
         {
             try
             {
                 var profile = await playersApi.GetProfile(accountId);
-                if (profile.err != null)
+                if (profile.Err != null)
                 {
-                    throw new Exception(profile.errmsg);
+                    throw new Exception(profile.Errmsg);
                 }
                 if (profile?.Info == null)
                 {
                     return 0;
                 }
-                return profile.Info.experience;
+                return profile.Info.Experience;
             }
             catch (ApiException ex)
             {
@@ -296,6 +406,11 @@ namespace TarkovMonitor
             }
         }
 
+        /// <summary>
+        /// Calculates a player's level based on their total experience points.
+        /// </summary>
+        /// <param name="experience">Total experience points</param>
+        /// <returns>Player's current level</returns>
         public static int GetLevel(int experience)
         {
             if (experience == 0)
@@ -306,221 +421,313 @@ namespace TarkovMonitor
             for (var i = 0; i < PlayerLevels.Count; i++)
             {
                 var levelData = PlayerLevels[i];
-                totalExp += levelData.exp;
+                totalExp += levelData.Exp;
                 if (totalExp == experience)
                 {
-                    return levelData.level;
+                    return levelData.Level;
                 }
                 if (totalExp > experience)
                 {
-                    return PlayerLevels[i - 1].level;
+                    return PlayerLevels[i - 1].Level;
                 }
             }
-            return PlayerLevels[PlayerLevels.Count - 1].level;
+            return PlayerLevels[PlayerLevels.Count - 1].Level;
         }
 
+        /// <summary>
+        /// Enables automatic data updates using the update timer.
+        /// Updates will occur every 20 minutes.
+        /// </summary>
         public static void StartAutoUpdates()
         {
             updateTimer.Enabled = true;
             updateTimer.Elapsed += UpdateTimer_Elapsed;
         }
 
-        private static void UpdateTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
+        // Event handler for the update timer
+        private static async void UpdateTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
-            UpdateApiData();
+            await UpdateApiData();
         }
 
+        // Response classes for API data
+
+        /// <summary>
+        /// Response class for tasks/quests data
+        /// </summary>
         public class TasksResponse
         {
-            public List<Task> tasks { get; set; }
+            public required List<Task> Tasks { get; set; }
         }
 
+        /// <summary>
+        /// Represents a game task/quest with its properties and requirements
+        /// </summary>
         public class Task
         {
-            public string id { get; set; }
-            public string name { get; set; }
-            public string normalizedName { get; set; }
-            public string? wikiLink { get; set; }
-            public bool restartable { get; set; }
-            public List<TaskFailCondition> failConditions { get; set; }
+            public required string Id { get; set; }
+            public required string Name { get; set; }
+            public required string NormalizedName { get; set; }
+            public string? WikiLink { get; set; }
+            public bool Restartable { get; set; }
+            public required List<TaskFailCondition> FailConditions { get; set; }
         }
 
+        /// <summary>
+        /// Represents a task reference used in fail conditions
+        /// </summary>
         public class TaskFragment
         {
-            public string id { get; set; }
+            public required string Id { get; set; }
         }
 
+        /// <summary>
+        /// Represents conditions that cause a task to fail
+        /// </summary>
         public class TaskFailCondition
         {
-            public TaskFragment task { get; set; }
-            public List<string> status { get; set; }
+            public required TaskFragment Task { get; set; }
+            public required List<string> Status { get; set; }
         }
 
+        /// <summary>
+        /// Response class for map data
+        /// </summary>
         public class MapsResponse
         {
-            public List<Map> maps { get; set; }
+            public required List<Map> Maps { get; set; }
         }
 
+        /// <summary>
+        /// Represents a game map and its properties
+        /// </summary>
         public class Map
         {
-            public string id { get; set; }
-            public string name { get; set; }
-            public string nameId { get; set; }
-            public string normalizedName { get; set; }
-            public List<BossSpawn> bosses { get; set; }
+            public required string Id { get; set; }
+            public required string Name { get; set; }
+            public required string NameId { get; set; }
+            public required string NormalizedName { get; set; }
+            public required List<BossSpawn> Bosses { get; set; }
             public bool HasGoons()
             {
                 List<string> goons = new() { "death-knight", "big-pipe", "birdeye" };
-                return bosses.Any(b => goons.Contains(b.boss.normalizedName) || b.escorts.Any(e => goons.Contains(e.boss.normalizedName)));
+                return Bosses.Any(b => goons.Contains(b.Boss.NormalizedName) || b.Escorts.Any(e => goons.Contains(e.Boss.NormalizedName)));
             }
         }
         public class BossEscort
         {
-            public Boss boss { get; set; }
+            public required Boss Boss { get; set; }
         }
         public class BossSpawn
         {
-            public Boss boss { get; set; }
-            public List<BossEscort> escorts { get; set; }
+            public required Boss Boss { get; set; }
+            public required List<BossEscort> Escorts { get; set; }
         }
         public class Boss
         {
-            public string normalizedName { get; set; }
+            public required string NormalizedName { get; set; }
         }
+        /// <summary>
+        /// Response class for item data
+        /// </summary>
         public class ItemsResponse
         {
-            public List<Item> items { get; set; }
+            public required List<Item> Items { get; set; }
         }
+        /// <summary>
+        /// Represents an in-game item and its properties
+        /// </summary>
         public class Item
         {
-            public string id { get; set; }
-            public string name { get; set; }
-            public int width { get; set; }
-            public int height { get; set; }
-			public string link { get; set; }
-			public string iconLink { get; set; }
-            public string gridImageLink { get; set; }
-            public string image512pxLink { get; set; }
-            public List<string> types { get; set; }
-            public ItemProperties? properties { get; set; }
+            public required string Id { get; set; }
+            public required string Name { get; set; }
+            public int Width { get; set; }
+            public int Height { get; set; }
+            public required string Link { get; set; }
+            public required string IconLink { get; set; }
+            public required string GridImageLink { get; set; }
+            public required string Image512pxLink { get; set; }
+            public required List<string> Types { get; set; }
+            public ItemProperties? Properties { get; set; }
         }
+        /// <summary>
+        /// Represents special properties for items (like weapon presets)
+        /// </summary>
         public class ItemProperties
         {
-            public ItemPropertiesDefaultPreset? defaultPreset { get; set; }
+            public ItemPropertiesDefaultPreset? DefaultPreset { get; set; }
         }
+        /// <summary>
+        /// Represents default preset configuration for weapons
+        /// </summary>
         public class ItemPropertiesDefaultPreset
         {
-            public string iconLink { get; set; }
-            public string gridImageLink { get; set; }
-            public int width { get; set; }
-            public int height { get; set; }
+            public required string IconLink { get; set; }
+            public required string GridImageLink { get; set; }
+            public int Width { get; set; }
+            public int Height { get; set; }
         }
 
+        /// <summary>
+        /// Response class for trader data
+        /// </summary>
         public class TradersResponse
         {
-            public List<Trader> traders { get; set; }
+            public required List<Trader> Traders { get; set; }
         }
+        /// <summary>
+        /// Represents a trader and their properties
+        /// </summary>
         public class Trader
         {
-            public string id { get; set; }
-            public string name { get; set; }
-            public string normalizedName { get; set; }
-            public List<TraderReputationLevel> reputationLevels { get; set; }
+            public required string Id { get; set; }
+            public required string Name { get; set; }
+            public required string NormalizedName { get; set; }
+            public required List<TraderReputationLevel> ReputationLevels { get; set; }
         }
+        /// <summary>
+        /// Represents a trader's reputation level and its benefits
+        /// </summary>
         public class TraderReputationLevel
         {
             public int minimumReputation { get; set; }
-            public decimal scavCooldownModifier { get; set; }
+            public decimal ScavCooldownModifier { get; set; }
         }
 
+        /// <summary>
+        /// Response class for hideout data
+        /// </summary>
         public class HideoutResponse
         {
-            public List<HideoutStation> hideoutStations { get; set; }
+            public required List<HideoutStation> HideoutStations { get; set; }
         }
+        /// <summary>
+        /// Represents a hideout station and its properties
+        /// </summary>
         public class HideoutStation
         {
-            public string id { get; set; }
-            public string name { get; set; }
-            public string normalizedName { get; set; }
-            public List<StationLevel> levels { get; set; }
+            public required string Id { get; set; }
+            public required string Name { get; set; }
+            public required string NormalizedName { get; set; }
+            public required List<StationLevel> Levels { get; set; }
         }
+        /// <summary>
+        /// Represents a level of a hideout station
+        /// </summary>
         public class StationLevel
         {
-            public string id { get; set; }
-            public int level { get; set; }
-            public List<StationBonus> bonuses { get; set; }
+            public required string Id { get; set; }
+            public int Level { get; set; }
+            public required List<StationBonus> Bonuses { get; set; }
         }
+        /// <summary>
+        /// Represents a bonus provided by a hideout station
+        /// </summary>
         public class StationBonus
         {
-            public string type { get; set; }
-            public string name { get; set; }
-            public decimal value { get; set; }
+            public required string Type { get; set; }
+            public required string Name { get; set; }
+            public decimal Value { get; set; }
         }
 
+        /// <summary>
+        /// Response class for player level data
+        /// </summary>
         public class PlayerLevelsResponse
         {
-            public List<PlayerLevel> playerLevels { get; set; }
+            public required List<PlayerLevel> PlayerLevels { get; set; }
         }
+        /// <summary>
+        /// Represents a player level and its experience requirement
+        /// </summary>
         public class PlayerLevel
         {
-            public int level { get; set; }
-            public int exp { get; set; }
+            public int Level { get; set; }
+            public int Exp { get; set; }
         }
 
+        /// <summary>
+        /// Request body for submitting queue times
+        /// </summary>
         public class QueueTimeBody
         {
-            public string map { get; set; }
-            public int time { get; set; }
-            public string type { get; set; }
-            public string gameMode { get; set; }
+            public required string Map { get; set; }
+            public int Time { get; set; }
+            public required string Type { get; set; }
+            public required string GameMode { get; set; }
         }
 
+        /// <summary>
+        /// Generic response for data submissions
+        /// </summary>
         public class DataSubmissionResponse
         {
-            public string status { get; set; }
+            public required string Status { get; set; }
         }
 
+        /// <summary>
+        /// Request body for submitting goon sightings
+        /// </summary>
         public class GoonsBody
         {
-            public string map { get; set; }
-            public string gameMode { get; set; }
-            public long timestamp { get; set; }
-            public int accountId { get; set; }
+            public required string Map { get; set; }
+            public required string GameMode { get; set; }
+            public long Timestamp { get; set; }
+            public int AccountId { get; set; }
         }
 
+        /// <summary>
+        /// Base response class for player API requests
+        /// </summary>
         public class PlayerApiResponse
         {
-            public int? err { get; set; }
-            public string? errmsg { get; set; }
+            public int? Err { get; set; }
+            public string? Errmsg { get; set; }
         }
 
+        /// <summary>
+        /// Response class for player search results
+        /// </summary>
         public class PlayerSearchResult
         {
-            public int aid { get; set; }
-            public string name { get; set; }
+            public int Aid { get; set; }
+            public required string Name { get; set; }
         }
 
+        /// <summary>
+        /// Response class for player profile data
+        /// </summary>
         public class PlayerProfileResult
         {
-            public int? err { get; set; }
-            public string? errmsg { get; set; }
+            public int? Err { get; set; }
+            public string? Errmsg { get; set; }
             public PlayerProfileInfo? Info { get; set; }
         }
+        /// <summary>
+        /// Contains detailed player profile information
+        /// </summary>
         public class PlayerProfileInfo
         {
-            public int experience { get; set; }
+            public int Experience { get; set; }
         }
 
+        /// <summary>
+        /// Calculates the scav cooldown time in seconds based on hideout bonuses and scav karma.
+        /// Takes into account:
+        /// - Base timer (1500 seconds)
+        /// - Hideout module bonuses that reduce cooldown
+        /// - Fence reputation (scav karma) modifiers
+        /// </summary>
+        /// <returns>The total cooldown time in seconds</returns>
         public static int ScavCooldownSeconds()
         {
             decimal baseTimer = 1500;
-
             decimal hideoutBonus = 0;
             foreach (var station in Stations)
             {
-                foreach (var level in station.levels)
+                foreach (var level in station.Levels)
                 {
-                    var cooldownBonus = level.bonuses.Find(b => b.type == "ScavCooldownTimer");
+                    var cooldownBonus = level.Bonuses.Find(b => b.Type == "ScavCooldownTimer");
                     if (cooldownBonus == null)
                     {
                         continue;
@@ -529,38 +736,60 @@ namespace TarkovMonitor
                     {
                         continue;
                     }
-                    var built = TarkovTracker.Progress.data.hideoutModulesProgress.Find(m => m.id == level.id && m.complete);
+                    var built = TarkovTracker.Progress.Data.HideoutModulesProgress.Find(m => m.Id == level.Id && m.Complete);
                     if (built == null)
                     {
                         continue;
                     }
-                    hideoutBonus += Math.Abs(cooldownBonus.value);
+                    hideoutBonus += Math.Abs(cooldownBonus.Value);
                 }
             }
-
             decimal karmaBonus = 1;
             foreach (var trader in Traders)
             {
-                foreach (var repLevel in trader.reputationLevels)
+                foreach (var repLevel in trader.ReputationLevels)
                 {
                     if (Properties.Settings.Default.scavKarma >= repLevel.minimumReputation)
                     {
-                        karmaBonus = repLevel.scavCooldownModifier;
+                        karmaBonus = repLevel.ScavCooldownModifier;
                     }
                 }
             }
-
             decimal coolDown = baseTimer * karmaBonus;
-
             //System.Diagnostics.Debug.WriteLine($"{hideoutBonus} {karmaBonus} {coolDown}");
             return (int)Math.Round(coolDown - (coolDown * hideoutBonus));
         }
 
+        /// <summary>
+        /// Resets the scav cooldown timer to the current time plus the calculated cooldown period.
+        /// </summary>
+        /// <returns>The number of seconds until the scav cooldown is complete</returns>
         public static int ResetScavCoolDown()
         {
             var cooldownSeconds = ScavCooldownSeconds();
-            ScaveAvailableTime = DateTime.Now.AddSeconds(cooldownSeconds);
+            ScavAvailableTime = DateTime.Now.AddSeconds(cooldownSeconds);
+
+            // Save to settings
+            Properties.Settings.Default.scavAvailableTime = ScavAvailableTime.ToString("o");
+            Properties.Settings.Default.Save();
+
             return cooldownSeconds;
+        }
+
+        /// <summary>
+        /// Gets the remaining time in seconds until the next Scav raid is available
+        /// </summary>
+        /// <returns>Seconds until next Scav raid is available, or 0 if available now</returns>
+        public static int GetRemainingScavCooldownSeconds()
+        {
+            // Ensure ScavAvailableTime is not default
+            if (ScavAvailableTime == DateTime.MinValue || ScavAvailableTime == default)
+            {
+                return 0;
+            }
+
+            var remainingTime = ScavAvailableTime - DateTime.Now;
+            return remainingTime.TotalSeconds > 0 ? (int)remainingTime.TotalSeconds : 0;
         }
     }
 }

@@ -7,114 +7,181 @@
 @layout AppLayout
 @implements IDisposable
 
+@* Main layout grid for the sounds configuration page *@
 <MudGrid Class="pa-0" Spacing="0">
-	<MudItem xs="12">
+    <MudItem xs="12">
+        @* Main container paper with sound configuration options *@
         <MudPaper Class="pa-2 ma-2 mx-4" Elevation="3">
-            <MudText Typo="Typo.h6" Class="d-flex align-center"><MudIcon Icon="@Icons.Material.Filled.Speaker" Class="mr-2"/>Sounds</MudText>
+            @* Page title with speaker icon *@
+            <MudText Typo="Typo.h6" Class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.Speaker" Class="mr-2" />Sounds
+            </MudText>
+
+            @* Sound configuration sections - Each section contains:
+                1. A switch to enable/disable custom sound
+                2. A play button to test the current sound *@
+
+            @* Raid Starting Sound Configuration *@
             <div>
-                <MudSwitch @bind-Value="@RaidStartSwitch" Label="Custom Raid Starting Sound" Color="Color.Info" Class="d-inline-flex" />
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayRaidStart" Class="d-inline-flex"><MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" /></MudButton>
+                <MudSwitch @bind-Value="@RaidStartSwitch" Label="Custom Raid Starting Sound" Color="Color.Info"
+                    Class="d-inline-flex" />
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayRaidStart"
+                    Class="d-inline-flex">
+                    <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" />
+                </MudButton>
             </div>
+
+            @* Match Found Sound Configuration *@
             <div>
-                <MudSwitch @bind-Value="@MatchFoundSwitch" Label="Custom Match Found Sound" Color="Color.Info" Class="d-inline-flex" />
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayMatchFound" Class="d-inline-flex"><MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" /></MudButton>
+                <MudSwitch @bind-Value="@MatchFoundSwitch" Label="Custom Match Found Sound" Color="Color.Info"
+                    Class="d-inline-flex" />
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayMatchFound"
+                    Class="d-inline-flex">
+                    <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" />
+                </MudButton>
             </div>
+
+            @* Restart Tasks Sound Configuration *@
             <div>
-                <MudSwitch @bind-Value="@RestartTaskSwitch" Label="Custom Restart Tasks Sound" Color="Color.Info" Class="d-inline-flex" />
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayRestartTask" Class="d-inline-flex"><MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" /></MudButton>
+                <MudSwitch @bind-Value="@RestartTaskSwitch" Label="Custom Restart Tasks Sound" Color="Color.Info"
+                    Class="d-inline-flex" />
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayRestartTask"
+                    Class="d-inline-flex">
+                    <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" />
+                </MudButton>
             </div>
+
+            @* Runthrough Period Sound Configuration *@
             <div>
-                <MudSwitch @bind-Value="@RunthroughSwitch" Label="Custom Runthrough Period Sound" Color="Color.Info" Class="d-inline-flex" />
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayRunthrough" Class="d-inline-flex"><MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" /></MudButton>
+                <MudSwitch @bind-Value="@RunthroughSwitch" Label="Custom Runthrough Period Sound" Color="Color.Info"
+                    Class="d-inline-flex" />
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayRunthrough"
+                    Class="d-inline-flex">
+                    <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" />
+                </MudButton>
             </div>
+
+            @* Air Filter On Sound Configuration *@
             <div>
-                <MudSwitch @bind-Value="@AirFilterOnSwitch" Label="Custom Air Filter On Sound" Color="Color.Info" Class="d-inline-flex" />
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayAirFilterOn" Class="d-inline-flex"><MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" /></MudButton>
+                <MudSwitch @bind-Value="@AirFilterOnSwitch" Label="Custom Air Filter On Sound" Color="Color.Info"
+                    Class="d-inline-flex" />
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayAirFilterOn"
+                    Class="d-inline-flex">
+                    <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" />
+                </MudButton>
             </div>
+
+            @* Air Filter Off Sound Configuration *@
             <div>
-                <MudSwitch @bind-Value="@AirFilterOffSwitch" Label="Custom Air Filter Off Sound" Color="Color.Info" Class="d-inline-flex" />
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayAirFilterOff" Class="d-inline-flex"><MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" /></MudButton>
+                <MudSwitch @bind-Value="@AirFilterOffSwitch" Label="Custom Air Filter Off Sound" Color="Color.Info"
+                    Class="d-inline-flex" />
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayAirFilterOff"
+                    Class="d-inline-flex">
+                    <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" />
+                </MudButton>
             </div>
+
+            @* Scav Cooldown Sound Configuration *@
             <div>
-                <MudSwitch @bind-Value="@ScavCooldownSwitch" Label="Custom Scav Cooldown Sound" Color="Color.Info" Class="d-inline-flex" />
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayScavAvailable" Class="d-inline-flex"><MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" /></MudButton>
+                <MudSwitch @bind-Value="@ScavCooldownSwitch" Label="Custom Scav Cooldown Sound" Color="Color.Info"
+                    Class="d-inline-flex" />
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info" @onclick="PlayScavAvailable"
+                    Class="d-inline-flex">
+                    <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" />
+                </MudButton>
             </div>
         </MudPaper>
-	</MudItem>
+    </MudItem>
 </MudGrid>
 
 @code {
+    // Cascading parameter to access the parent AppLayout component
+    [CascadingParameter(Name = "AppLayout")]
+    public AppLayout AppLayout { get; set; } = null!;
 
-    [CascadingParameter(Name="AppLayout")]
-    public AppLayout AppLayout { get; set; }
-
+    // Lifecycle method called when component is first initialized
     protected override void OnInitialized()
     {
         base.OnInitialized();
     }
 
+    // Lifecycle method called when parameters are set
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
     }
 
+    // Lifecycle method called after the component has been rendered
     protected override void OnAfterRender(bool firstRender)
     {
         base.OnAfterRender(firstRender);
         if (firstRender)
         {
+            // Set the page title on first render
             AppLayout.SetTitle("Sounds");
         }
     }
 
+    // Implementation of IDisposable for cleanup
     public void Dispose()
     {
     }
 
-    public void PlayRaidStart()
+    // Methods to play different sound effects
+    // Each method calls the Sound.Play method with a specific sound identifier
+
+    public async Task PlayRaidStart()
     {
-        Sound.Play("raid_starting");
+        await Sound.Play("raid_starting");
     }
 
-    public void PlayMatchFound()
+    public async Task PlayMatchFound()
     {
-        Sound.Play("match_found");
+        await Sound.Play("match_found");
     }
 
-    public void PlayRestartTask()
+    public async Task PlayRestartTask()
     {
-        Sound.Play("restart_failed_tasks");
+        await Sound.Play("restart_failed_tasks");
     }
 
-    public void PlayRunthrough()
+    public async Task PlayRunthrough()
     {
-        Sound.Play("runthrough_over");
+        await Sound.Play("runthrough_over");
     }
 
-    public void PlayAirFilterOn()
+    public async Task PlayAirFilterOn()
     {
-        Sound.Play("air_filter_on");
+        await Sound.Play("air_filter_on");
     }
 
-    public void PlayAirFilterOff()
+    public async Task PlayAirFilterOff()
     {
-        Sound.Play("air_filter_off");
+        await Sound.Play("air_filter_off");
     }
 
-    public void PlayScavAvailable()
+    public async Task PlayScavAvailable()
     {
-        Sound.Play("scav_available");
+        await Sound.Play("scav_available");
     }
 
+    // Dialog options for file picker
     public DialogOptions diagOptions = new DialogOptions { CloseOnEscapeKey = true };
 
+    // File dialog configuration for selecting MP3 files
     private OpenFileDialog fileDialog = new OpenFileDialog()
     {
         Filter = "MP3 files (*.mp3)|*.mp3"
     };
 
-    public bool RaidStartSwitch { 
-        get 
+    // Properties for each sound type switch
+    // Each property:
+    // - Gets whether a custom sound is set for the specific sound type
+    // - Sets the file dialog title and handles enabling/disabling custom sounds
+
+    public bool RaidStartSwitch
+    {
+        get
         {
             return Sound.IsCustom("raid_starting");
         }
@@ -128,8 +195,9 @@
         }
     }
 
-    public bool MatchFoundSwitch { 
-        get 
+    public bool MatchFoundSwitch
+    {
+        get
         {
             return Sound.IsCustom("match_found");
         }
@@ -223,21 +291,28 @@
         }
     }
 
+    // Helper method to toggle custom sounds
+    // Parameters:
+    // - key: The identifier for the sound type
+    // - isCustom: Whether to enable (true) or disable (false) custom sound
     private void ToggleCustomSound(string key, bool isCustom)
     {
         if (isCustom)
         {
+            // Show file dialog to select custom sound file
             var result = fileDialog.ShowDialog();
             if (result != System.Windows.Forms.DialogResult.OK)
             {
                 return;
             }
+            // Set the custom sound with selected file
             Sound.SetCustomSound(key, fileDialog.FileName);
         }
         else
         {
             try
             {
+                // Remove custom sound and revert to default
                 Sound.RemoveCustomSound(key);
             }
             catch (Exception ex)
